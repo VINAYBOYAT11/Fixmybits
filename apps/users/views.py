@@ -5,6 +5,7 @@ from django.contrib.auth import get_user_model
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import ScopedRateThrottle
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 from rest_framework_simplejwt.exceptions import TokenError
@@ -27,6 +28,8 @@ class RegisterView(APIView):
     Creates a new user + role profile. Account must be approved by admin.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_sensitive"
 
     @extend_schema(
         request=RegisterSerializer,
@@ -54,6 +57,8 @@ class LoginView(APIView):
     Returns JWT access and refresh tokens.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_sensitive"
 
     @extend_schema(
         request=inline_serializer(
@@ -177,6 +182,8 @@ class PasswordResetRequestView(APIView):
     Generates a password reset token and sends an email.
     """
     permission_classes = [AllowAny]
+    throttle_classes = [ScopedRateThrottle]
+    throttle_scope = "auth_sensitive"
 
     @extend_schema(
         request=PasswordResetRequestSerializer,
@@ -195,7 +202,9 @@ class PasswordResetRequestView(APIView):
                 
                 uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
                 token = default_token_generator.make_token(user)
-                reset_link = f"http://localhost:3000/reset-password?uid={uidb64}&token={token}"
+                from django.conf import settings as django_settings
+                frontend_base = getattr(django_settings, "FRONTEND_URL", "http://localhost:3000")
+                reset_link = f"{frontend_base}/reset-password?uid={uidb64}&token={token}"
                 
                 from apps.tasks.email_tasks import send_password_reset_email
                 send_password_reset_email.delay(email, reset_link)

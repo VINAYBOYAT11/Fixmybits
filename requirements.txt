@@ -1,15 +1,27 @@
+# Core
 Django>=4.2,<5.0
 djangorestframework>=3.14.0
 djangorestframework-simplejwt>=5.3.0
 django-environ>=0.11.2
-psycopg2-binary>=2.9.9
+
+# Database
+# Use psycopg2-binary for local dev/CI; swap to psycopg2 (compiled) for production
+psycopg2-binary>=2.9.9  # local/CI only — replace with psycopg2 in production builds
+
+# Async task queue
 celery>=5.3.6
 redis>=5.0.1
+
+# API utilities
 django-cors-headers>=4.3.1
+django-filter>=23.5
+drf-spectacular>=0.27.0
+
+# Media / File storage
 cloudinary>=1.36.0
 django-cloudinary-storage>=0.3.0
 Pillow>=10.2.0
-django-filter>=23.5
-drf-spectacular>=0.27.0
+
+# Static file serving & WSGI server
 gunicorn>=21.2.0
 whitenoise>=6.6.0

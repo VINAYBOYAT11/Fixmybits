@@ -1,0 +1,125 @@
+============================= test session starts =============================
+platform win32 -- Python 3.14.3, pytest-9.0.2, pluggy-1.6.0 -- C:\Users\gindi\OneDrive\Desktop\Devops\antigravity\persnoal_fun\fixmybits\venv\Scripts\python.exe
+cachedir: .pytest_cache
+django: version: 4.2.29, settings: fixmybits.settings (from ini)
+rootdir: C:\Users\gindi\OneDrive\Desktop\Devops\antigravity\persnoal_fun\fixmybits
+configfile: pytest.ini
+plugins: anyio-4.13.0, Faker-40.12.0, cov-7.1.0, django-4.12.0
+collecting ... collected 16 items
+
+tests.py::TestRegistration::test_register_tester_success PASSED          [  6%]
+tests.py::TestRegistration::test_register_startup_requires_company_name PASSED [ 12%]
+tests.py::TestRegistration::test_register_admin_is_blocked PASSED        [ 18%]
+tests.py::TestRegistration::test_register_mismatched_passwords PASSED    [ 25%]
+tests.py::TestLogin::test_login_success PASSED                           [ 31%]
+tests.py::TestLogin::test_login_wrong_password FAILED                    [ 37%]
+tests.py::TestLogin::test_unapproved_user_cannot_login FAILED            [ 43%]
+tests.py::TestPasswordReset::test_password_reset_request_valid_email PASSED [ 50%]
+tests.py::TestPasswordReset::test_password_reset_unknown_email_returns_200 PASSED [ 56%]
+tests.py::TestPermissionBoundaries::test_unauthenticated_cannot_access_tester_projects PASSED [ 62%]
+tests.py::TestPermissionBoundaries::test_startup_cannot_access_tester_projects PASSED [ 68%]
+tests.py::TestPermissionBoundaries::test_tester_cannot_access_startup_endpoints PASSED [ 75%]
+tests.py::TestPermissionBoundaries::test_tester_cannot_access_admin_endpoints PASSED [ 81%]
+tests.py::TestReportValidation::test_invalid_drive_link_domain_rejected PASSED [ 87%]
+tests.py::TestReportValidation::test_valid_google_drive_link_accepted FAILED [ 93%]
+tests.py::TestReportValidation::test_no_screenshot_or_drive_link_rejected FAILED [100%]
+
+================================== FAILURES ===================================
+_____________________ TestLogin.test_login_wrong_password _____________________
+
+self = <tests.TestLogin object at 0x000001CC191225D0>
+api_client = <rest_framework.test.APIClient object at 0x000001CC1AF74710>
+
+    def test_login_wrong_password(self, api_client):
+        make_user("wrongpass@test.com", password="correct1")
+        res = api_client.post("/api/auth/login/", {
+            "email": "wrongpass@test.com",
+            "password": "wrong",
+        }, format="json")
+>       assert res.status_code == 400
+E       assert 401 == 400
+E        +  where 401 = <Response status_code=401, "application/json">.status_code
+
+tests.py:105: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  django.request:log.py:246 Unauthorized: /api/auth/login/
+_________________ TestLogin.test_unapproved_user_cannot_login _________________
+
+self = <tests.TestLogin object at 0x000001CC190F7100>
+api_client = <rest_framework.test.APIClient object at 0x000001CC1AC33130>
+
+    def test_unapproved_user_cannot_login(self, api_client):
+        make_user("pending@test.com", password="pass1234", is_approved=False)
+        res = api_client.post("/api/auth/login/", {
+            "email": "pending@test.com",
+            "password": "pass1234",
+        }, format="json")
+>       assert res.status_code == 400
+E       assert 403 == 400
+E        +  where 403 = <Response status_code=403, "application/json">.status_code
+
+tests.py:113: AssertionError
+------------------------------ Captured log call ------------------------------
+WARNING  django.request:log.py:246 Forbidden: /api/auth/login/
+_________ TestReportValidation.test_valid_google_drive_link_accepted __________
+
+self = <tests.TestReportValidation object at 0x000001CC19123250>
+
+    def test_valid_google_drive_link_accepted(self):
+        from apps.reports.serializers import ReportCreateSerializer
+        s = ReportCreateSerializer(data={
+            "title": "Bug",
+            "description": "desc",
+            "steps_to_reproduce": "steps",
+            "severity": "low",
+            "drive_link": "https://drive.google.com/file/d/abc123/view",
+        })
+>       assert s.is_valid(), s.errors
+E       AssertionError: {'severity': [ErrorDetail(string='"low" is not a valid choice.', code='invalid_choice')]}
+E       assert False
+E        +  where False = is_valid()
+E        +    where is_valid = ReportCreateSerializer(data={'title': 'Bug', 'description': 'desc', 'steps_to_reproduce': 'steps', 'severity': 'low', 'drive_link': 'https://drive.google.com/file/d/abc123/view'}):\n    title = CharField(max_length=255)\n    description = CharField(style={'base_template': 'textarea.html'})\n    steps_to_reproduce = CharField(style={'base_template': 'textarea.html'})\n    severity = ChoiceField(choices=[('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High'), ('Critical', 'Critical')], required=False)\n    screenshot = ImageField(allow_null=True, max_length=100, required=False)\n    drive_link = URLField(allow_blank=True, allow_null=True, help_text='Google Drive link (must be open to anyone with the link)', max_length=500, required=False).is_valid
+
+tests.py:193: AssertionError
+_______ TestReportValidation.test_no_screenshot_or_drive_link_rejected ________
+
+self = <tests.TestReportValidation object at 0x000001CC190F7A80>
+
+    def test_no_screenshot_or_drive_link_rejected(self):
+        from apps.reports.serializers import ReportCreateSerializer
+        s = ReportCreateSerializer(data={
+            "title": "Bug",
+            "description": "desc",
+            "steps_to_reproduce": "steps",
+            "severity": "low",
+        })
+        assert not s.is_valid()
+>       assert "non_field_errors" in s.errors or any("screenshot" in str(v) or "drive" in str(v) for v in s.errors.values())
+E       assert ('non_field_errors' in {'severity': [ErrorDetail(string='"low" is not a valid choice.', code='invalid_choice')]} or False)
+E        +  where {'severity': [ErrorDetail(string='"low" is not a valid choice.', code='invalid_choice')]} = ReportCreateSerializer(data={'title': 'Bug', 'description': 'desc', 'steps_to_reproduce': 'steps', 'severity': 'low'}):\n    title = CharField(max_length=255)\n    description = CharField(style={'base_template': 'textarea.html'})\n    steps_to_reproduce = CharField(style={'base_template': 'textarea.html'})\n    severity = ChoiceField(choices=[('Low', 'Low'), ('Medium', 'Medium'), ('High', 'High'), ('Critical', 'Critical')], required=False)\n    screenshot = ImageField(allow_null=True, max_length=100, required=False)\n    drive_link = URLField(allow_blank=True, allow_null=True, help_text='Google Drive link (must be open to anyone with the link)', max_length=500, required=False).errors
+E        +  and   False = any(<generator object TestReportValidation.test_no_screenshot_or_drive_link_rejected.<locals>.<genexpr> at 0x000001CC1B570D60>)
+
+tests.py:204: AssertionError
+-------------------------- Captured stderr teardown ---------------------------
+Destroying test database for alias 'default'...
+
+============================== warnings summary ===============================
+venv\Lib\site-packages\django\conf\__init__.py:278
+  C:\Users\gindi\OneDrive\Desktop\Devops\antigravity\persnoal_fun\fixmybits\venv\Lib\site-packages\django\conf\__init__.py:278: RemovedInDjango51Warning: The DEFAULT_FILE_STORAGE setting is deprecated. Use STORAGES instead.
+    warnings.warn(DEFAULT_FILE_STORAGE_DEPRECATED_MSG, RemovedInDjango51Warning)
+
+venv\Lib\site-packages\django\conf\__init__.py:289
+  C:\Users\gindi\OneDrive\Desktop\Devops\antigravity\persnoal_fun\fixmybits\venv\Lib\site-packages\django\conf\__init__.py:289: RemovedInDjango51Warning: The STATICFILES_STORAGE setting is deprecated. Use STORAGES instead.
+    warnings.warn(STATICFILES_STORAGE_DEPRECATED_MSG, RemovedInDjango51Warning)
+
+tests.py: 13 warnings
+  C:\Users\gindi\OneDrive\Desktop\Devops\antigravity\persnoal_fun\fixmybits\venv\Lib\site-packages\django\core\handlers\base.py:61: UserWarning: No directory at: C:\Users\gindi\OneDrive\Desktop\Devops\antigravity\persnoal_fun\fixmybits\staticfiles\
+    mw_instance = middleware(adapted_handler)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ===========================
+FAILED tests.py::TestLogin::test_login_wrong_password - assert 401 == 400
+FAILED tests.py::TestLogin::test_unapproved_user_cannot_login - assert 403 ==...
+FAILED tests.py::TestReportValidation::test_valid_google_drive_link_accepted
+FAILED tests.py::TestReportValidation::test_no_screenshot_or_drive_link_rejected
+================== 4 failed, 12 passed, 15 warnings in 5.04s ==================

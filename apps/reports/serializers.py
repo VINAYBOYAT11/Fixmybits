@@ -1,9 +1,33 @@
 """
 Serializers for the reports app.
 """
+from urllib.parse import urlparse
+
 from rest_framework import serializers
 
 from .models import Report
+
+MAX_SCREENSHOT_BYTES = 5 * 1024 * 1024  # 5 MB
+
+
+def validate_screenshot_size(image):
+    """Shared validator: reject screenshots larger than 5 MB."""
+    if image and hasattr(image, "size") and image.size > MAX_SCREENSHOT_BYTES:
+        raise serializers.ValidationError(
+            f"Screenshot must be smaller than 5 MB (uploaded: {image.size // 1024 // 1024} MB)."
+        )
+    return image
+
+
+def validate_google_drive_link(url):
+    """Shared validator: only allow drive.google.com URLs."""
+    if url:
+        hostname = urlparse(url).hostname or ""
+        if hostname not in ("drive.google.com", "docs.google.com"):
+            raise serializers.ValidationError(
+                "Only Google Drive links (drive.google.com) are accepted."
+            )
+    return url
 
 
 class ReportSerializer(serializers.ModelSerializer):
@@ -55,6 +79,19 @@ class ReportCreateSerializer(serializers.ModelSerializer):
             "drive_link",
         ]
 
+    def validate_screenshot(self, value):
+        return validate_screenshot_size(value)
+
+    def validate_drive_link(self, value):
+        return validate_google_drive_link(value)
+
+    def validate(self, attrs):
+        if not attrs.get("screenshot") and not attrs.get("drive_link"):
+            raise serializers.ValidationError(
+                "You must provide either a screenshot upload or a Google Drive link."
+            )
+        return attrs
+
     def create(self, validated_data):
         request = self.context["request"]
         project = self.context["project"]
@@ -89,3 +126,8 @@ class ReportUpdateSerializer(serializers.ModelSerializer):
         ]
         extra_kwargs = {"screenshot": {"required": False, "allow_null": True}}
 
+    def validate_screenshot(self, value):
+        return validate_screenshot_size(value)
+
+    def validate_drive_link(self, value):
+        return validate_google_drive_link(value)

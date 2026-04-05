@@ -92,6 +92,13 @@ class RegisterSerializer(serializers.ModelSerializer):
             "bio",
         ]
 
+    def validate_role(self, value):
+        if value == User.Role.ADMIN:
+            raise serializers.ValidationError(
+                "Admin accounts cannot be created via the public registration endpoint."
+            )
+        return value
+
     def validate(self, attrs):
         if attrs["password"] != attrs.pop("confirm_password"):
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
