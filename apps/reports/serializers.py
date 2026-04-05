@@ -27,6 +27,7 @@ class ReportSerializer(serializers.ModelSerializer):
             "severity",
             "screenshot",
             "screenshot_url",
+            "drive_link",
             "status",
             "admin_feedback",
             "submitted_at",
@@ -51,6 +52,7 @@ class ReportCreateSerializer(serializers.ModelSerializer):
             "steps_to_reproduce",
             "severity",
             "screenshot",
+            "drive_link",
         ]
 
     def create(self, validated_data):
@@ -70,3 +72,20 @@ class AdminReviewSerializer(serializers.Serializer):
 
     action = serializers.ChoiceField(choices=ACTION_CHOICES)
     feedback = serializers.CharField(required=False, allow_blank=True, default="")
+
+
+class ReportUpdateSerializer(serializers.ModelSerializer):
+    """Used by a tester to edit a report that is still pending_admin_review."""
+
+    class Meta:
+        model = Report
+        fields = [
+            "title",
+            "description",
+            "steps_to_reproduce",
+            "severity",
+            "screenshot",
+            "drive_link",
+        ]
+        extra_kwargs = {"screenshot": {"required": False, "allow_null": True}}
+

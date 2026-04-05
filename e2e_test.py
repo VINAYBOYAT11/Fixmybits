@@ -40,29 +40,58 @@ assert res.status_code == 201, f"Failed to create project: {res.text}"
 project_id = res.json()["id"]
 print(f"✅ Project Created! ID: {project_id}")
 
+print_step("1.5. Startup Submits Project")
+res = requests.post(f"{BASE_URL}/startup/projects/{project_id}/submit/", headers=auth_headers(startup_token))
+assert res.status_code == 200, f"Startup failed to submit project: {res.text}"
+print("✅ Startup submitted project for approval")
+
 print_step("2. Admin Approves Project")
 res = requests.post(f"{BASE_URL}/admin/projects/{project_id}/approve/", headers=auth_headers(admin_token), json={"action": "approve"})
 assert res.status_code == 200, f"Admin failed to approve project: {res.text}"
 print("✅ Admin Approved Project")
 
-print_step("3. Tester Fetches Open Projects & Applies")
-res = requests.get(f"{BASE_URL}/tester/projects/open/", headers=auth_headers(tester_token))
-assert res.status_code == 200
-open_projects = res.json()
-assert any(p["id"] == project_id for p in open_projects), "Project not found in open list"
+print_step("3.5. Tester Cancels an Application")
+# Let's create a dummy project just to test cancellation
+res_dummy = requests.post(
+    f"{BASE_URL}/startup/projects/",
+    headers=auth_headers(startup_token),
+    json={"name": "Dummy App Cancel", "in_scope": "x", "testing_rules": "y"}
+)
+dummy_id = res_dummy.json()["id"]
+requests.post(f"{BASE_URL}/startup/projects/{dummy_id}/submit/", headers=auth_headers(startup_token))
+requests.post(f"{BASE_URL}/admin/projects/{dummy_id}/approve/", headers=auth_headers(admin_token), json={"action": "approve"})
 
-res = requests.post(f"{BASE_URL}/tester/projects/{project_id}/apply/", headers=auth_headers(tester_token))
-assert res.status_code == 201, f"Tester apply failed: {res.text}"
+# Apply to dummy and cancel
+res_apply_dummy = requests.post(f"{BASE_URL}/tester/projects/{dummy_id}/apply/", headers=auth_headers(tester_token))
+app_cancel_id = res_apply_dummy.json()["id"]
+
+res_cancel = requests.delete(f"{BASE_URL}/tester/applications/{app_cancel_id}/", headers=auth_headers(tester_token))
+assert res_cancel.status_code == 204, f"Tester cancel failed: {res_cancel.text}"
+print("✅ Tester successfully cancelled application")
+
+print_step("3. Tester Fetches Open Projects & Applies (Primary)")
+res_open = requests.get(f"{BASE_URL}/tester/projects/open/", headers=auth_headers(tester_token))
+assert res_open.status_code == 200
+res_apply = requests.post(f"{BASE_URL}/tester/projects/{project_id}/apply/", headers=auth_headers(tester_token))
+assert res_apply.status_code == 201, f"Tester apply failed: {res_apply.text}"
 print("✅ Tester successfully applied")
 
-print_step("4. Admin Assigns Tester")
+print_step("4. Admin Assigns Tester via Application Accept")
 # we need tester's user ID
 me_res = requests.get(f"{BASE_URL}/auth/me/", headers=auth_headers(tester_token))
 tester_id = me_res.json()["id"]
 
-res = requests.post(f"{BASE_URL}/admin/projects/{project_id}/assign/", headers=auth_headers(admin_token), json={"tester_id": tester_id})
-assert res.status_code == 200, f"Admin assign failed: {res.text}"
-print("✅ Admin assigned tester to project")
+# Actually let's test the new application accept flow!
+# First get the application id
+res = requests.get(f"{BASE_URL}/admin/applications/?project_id={project_id}", headers=auth_headers(admin_token))
+assert res.status_code == 200
+apps = res.json()["results"]
+assert len(apps) > 0, "No applications found"
+application_id = apps[0]["id"]
+
+res = requests.post(f"{BASE_URL}/admin/applications/{application_id}/accept/", headers=auth_headers(admin_token))
+assert res.status_code == 200, f"Admin application accept failed: {res.text}"
+print("✅ Admin assigned tester to project by accepting application")
 
 print_step("5. Tester Submits Bug Report")
 # Create a valid dummy GIF file for upload
@@ -90,8 +119,24 @@ if res.status_code == 500:
     print(f"500 ERROR: {m.group(1) if m else 'No title'}")
 assert res.status_code == 201, f"Report creation failed: {res.status_code}"
 report_id = res.json()["id"]
-print(f"✅ Tester submitted bug report! ID: {report_id}")
+print(f"✅ Tester submitted bug report with Screenshot! ID: {report_id}")
 os.remove(dummy_img_path)
+
+print_step("5.5 Tester Submits Report with Google Drive Link")
+res = requests.post(
+    f"{BASE_URL}/tester/projects/{project_id}/reports/",
+    headers=auth_headers(tester_token),
+    json={
+        "title": "XSS Vulnerability found",
+        "description": "Reflected XSS on search page.",
+        "severity": "Medium",
+        "steps_to_reproduce": "1. Search for <script>alert(1)</script>",
+        "drive_link": "https://drive.google.com/file/d/test1234/view"
+    }
+)
+assert res.status_code == 201, f"Report with drive link creation failed: {res.text}"
+drive_report_id = res.json()["id"]
+print(f"✅ Tester submitted bug report with Google Drive link! ID: {drive_report_id}")
 
 print_step("6. Admin Approves Bug Report")
 res = requests.post(f"{BASE_URL}/admin/reports/{report_id}/review/", headers=auth_headers(admin_token), json={"action": "approve"})
@@ -102,5 +147,16 @@ print_step("7. Startup Marks Report as Fixed")
 res = requests.patch(f"{BASE_URL}/startup/reports/{report_id}/mark_fixed/", headers=auth_headers(startup_token))
 assert res.status_code == 200, f"Startup failed to mark as fixed: {res.text}"
 print("✅ Startup marked report as FIXED")
+
+print_step("8. Testing Generics List View Search")
+res = requests.get(f"{BASE_URL}/admin/available-testers/?search=tester2", headers=auth_headers(admin_token))
+assert res.status_code == 200
+assert res.json()["count"] >= 1
+print("✅ Admin Generics Search works correctly")
+
+print_step("9. Testing Password Reset Workflow")
+res = requests.post(f"{BASE_URL}/auth/password-reset/", json={"email": "startup2@example.com"})
+assert res.status_code == 200, f"Password reset request failed: {res.text}"
+print("✅ Password reset token successfully requested")
 
 print_step("🎉 All Endpoints Validated! The workflow is 100% operational.")

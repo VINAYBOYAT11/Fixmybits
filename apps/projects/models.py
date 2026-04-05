@@ -4,6 +4,7 @@ Project and Application models for FixMyBits.
 import uuid
 from django.conf import settings
 from django.db import models
+from django.core.exceptions import ValidationError
 
 
 class Project(models.Model):
@@ -39,6 +40,7 @@ class Project(models.Model):
         related_name="assigned_projects",
         limit_choices_to={"role": "tester"},
     )
+    rejection_reason = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
@@ -57,6 +59,7 @@ class Application(models.Model):
         PENDING = "pending", "Pending"
         ACCEPTED = "accepted", "Accepted"
         REJECTED = "rejected", "Rejected"
+        CANCELLED = "cancelled", "Cancelled"
 
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     project = models.ForeignKey(
@@ -81,3 +84,19 @@ class Application(models.Model):
 
     def __str__(self):
         return f"{self.tester.email} → {self.project.name} ({self.get_status_display()})"
+
+    def save(self, *args, **kwargs):
+        # Guard: prevent two accepted applications for the same project
+        if self.status == self.Status.ACCEPTED:
+            qs = Application.objects.filter(
+                project=self.project,
+                status=self.Status.ACCEPTED,
+            )
+            if self.pk:
+                qs = qs.exclude(pk=self.pk)
+            if qs.exists():
+                raise ValidationError(
+                    "This project already has an accepted application. "
+                    "Reject or cancel the existing one first."
+                )
+        super().save(*args, **kwargs)

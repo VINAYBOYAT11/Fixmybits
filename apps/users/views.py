@@ -11,7 +11,12 @@ from rest_framework_simplejwt.exceptions import TokenError
 from drf_spectacular.utils import extend_schema, inline_serializer, OpenApiExample
 from rest_framework import serializers
 
-from .serializers import RegisterSerializer, UserSerializer
+from .serializers import (
+    RegisterSerializer,
+    UserSerializer,
+    PasswordResetRequestSerializer,
+    PasswordResetConfirmSerializer,
+)
 
 User = get_user_model()
 
@@ -164,3 +169,74 @@ class MeView(APIView):
     )
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+
+class PasswordResetRequestView(APIView):
+    """
+    POST /api/auth/password-reset/
+    Generates a password reset token and sends an email.
+    """
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=PasswordResetRequestSerializer,
+        responses={200: inline_serializer("PwdResetRes", {"message": serializers.CharField()})},
+        tags=["auth"]
+    )
+    def post(self, request):
+        serializer = PasswordResetRequestSerializer(data=request.data)
+        if serializer.is_valid():
+            email = serializer.validated_data["email"]
+            try:
+                user = User.objects.get(email=email)
+                from django.contrib.auth.tokens import default_token_generator
+                from django.utils.http import urlsafe_base64_encode
+                from django.utils.encoding import force_bytes
+                
+                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+                token = default_token_generator.make_token(user)
+                reset_link = f"http://localhost:3000/reset-password?uid={uidb64}&token={token}"
+                
+                from apps.tasks.email_tasks import send_password_reset_email
+                send_password_reset_email.delay(email, reset_link)
+            except User.DoesNotExist:
+                # Silently ignore to prevent email enumeration
+                pass
+            return Response({"message": "If that email is valid, a reset link has been sent."}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class PasswordResetConfirmView(APIView):
+    """
+    POST /api/auth/password-reset-confirm/
+    Verifies token and updates the password.
+    """
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=PasswordResetConfirmSerializer,
+        responses={200: inline_serializer("PwdResetConfirmRes", {"message": serializers.CharField()})},
+        tags=["auth"]
+    )
+    def post(self, request):
+        serializer = PasswordResetConfirmSerializer(data=request.data)
+        if serializer.is_valid():
+            uidb64 = serializer.validated_data["uidb64"]
+            token = serializer.validated_data["token"]
+            new_password = serializer.validated_data["new_password"]
+
+            from django.contrib.auth.tokens import default_token_generator
+            from django.utils.http import urlsafe_base64_decode
+
+            try:
+                uid = urlsafe_base64_decode(uidb64).decode()
+                user = User.objects.get(pk=uid)
+            except (TypeError, ValueError, OverflowError, User.DoesNotExist):
+                user = None
+
+            if user is not None and default_token_generator.check_token(user, token):
+                user.set_password(new_password)
+                user.save(update_fields=["password"])
+                return Response({"message": "Password has been reset successfully."}, status=status.HTTP_200_OK)
+            return Response({"error": "Invalid token or user ID."}, status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

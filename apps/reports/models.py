@@ -37,6 +37,7 @@ class Report(models.Model):
     steps_to_reproduce = models.TextField()
     severity = models.CharField(max_length=10, choices=Severity.choices, default=Severity.LOW)
     screenshot = models.ImageField(upload_to="reports/screenshots/", null=True, blank=True)
+    drive_link = models.URLField(max_length=500, blank=True, null=True, help_text="Google Drive link (must be open to anyone with the link)")
     status = models.CharField(
         max_length=25,
         choices=Status.choices,

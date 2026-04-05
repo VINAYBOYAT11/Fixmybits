@@ -11,9 +11,22 @@ User = get_user_model()
 
 
 class StartupProfileSerializer(serializers.ModelSerializer):
+    logo_url = serializers.SerializerMethodField(read_only=True)
+
     class Meta:
         model = StartupProfile
-        fields = ["company_name", "website"]
+        fields = ["company_name", "website", "logo", "logo_url"]
+        extra_kwargs = {"logo": {"required": False, "allow_null": True}}
+
+    def get_logo_url(self, obj):
+        if obj.logo:
+            return obj.logo.url
+        return None
+
+
+# Alias used in profile update endpoint
+StartupProfileUpdateSerializer = StartupProfileSerializer
+
 
 
 class TesterProfileSerializer(serializers.ModelSerializer):
@@ -130,3 +143,19 @@ class TesterProfileUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = TesterProfile
         fields = ["skills", "tools", "experience_level", "bio"]
+
+
+class PasswordResetRequestSerializer(serializers.Serializer):
+    email = serializers.EmailField()
+
+
+class PasswordResetConfirmSerializer(serializers.Serializer):
+    uidb64 = serializers.CharField()
+    token = serializers.CharField()
+    new_password = serializers.CharField(write_only=True, min_length=8, style={"input_type": "password"})
+    confirm_password = serializers.CharField(write_only=True, style={"input_type": "password"})
+
+    def validate(self, attrs):
+        if attrs["new_password"] != attrs["confirm_password"]:
+            raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
+        return attrs
