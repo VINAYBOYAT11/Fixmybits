@@ -30,18 +30,21 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy installed packages from builder stage
 COPY --from=builder /install /usr/local
 
-# Copy application source
-COPY . .
+# Create a non-root user before copying app files
+RUN addgroup --system django && adduser --system --ingroup django django
 
-# Create a non-root user and switch to it
-RUN addgroup --system django && adduser --system --ingroup django django \
-    && chown -R django:django /app
+# Copy application source with correct ownership in one layer
+COPY --chown=django:django . .
+
+# Create staticfiles dir so collectstatic can write to it
+RUN mkdir -p /app/staticfiles && chown django:django /app/staticfiles
+
 USER django
 
 # Collect static files (requires a placeholder SECRET_KEY at build time)
 RUN SECRET_KEY=build-time-placeholder \
     DEBUG=False \
-    DATABASE_URL=sqlite:///tmp/build.sqlite3 \
+    DATABASE_URL=sqlite:////tmp/build.sqlite3 \
     python manage.py collectstatic --noinput
 
 EXPOSE $PORT

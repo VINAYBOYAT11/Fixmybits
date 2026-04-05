@@ -203,8 +203,8 @@ LOGGING = {
     "disable_existing_loggers": False,
     "formatters": {
         "json": {
-            "()": "django.utils.log.ServerFormatter",
-            "format": '{"time": "%(asctime)s", "level": "%(levelname)s", "logger": "%(name)s", "message": "%(message)s"}',
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
         },
         "verbose": {
             "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
