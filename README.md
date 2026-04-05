@@ -1,39 +1,40 @@
-# FixMyBits – Non-Profit Cybersecurity Marketplace Backend
+# FixMyBits – Non-Profit Cybersecurity Marketplace
 
-A Django REST Framework API powering **FixMyBits**, a platform where startups post bug-bounty projects and vetted security testers submit reports. It features a complete role-based workflow, asynchronous Celery email notifications, advanced query filtering, and secure password-reset pipelines.
+A full-stack platform where startups post bug-bounty projects and vetted security testers submit reports. It features a complete role-based workflow, asynchronous Celery email notifications, advanced query filtering, and secure password-reset pipelines.
 
 ---
 
-## 📦 Project Structure
+## 📦 Monorepo Structure
 
-```
+This repository uses a modern Monorepo architecture containing both the backend API and the frontend UI.
+
+```text
 fixmybits/
-├── manage.py
-├── requirements.txt
-├── .env.example
-├── fixmybits/          # Django project package
-│   ├── settings.py
-│   ├── urls.py
-│   ├── celery.py
-│   └── __init__.py
-└── apps/
-    ├── users/          # Custom user model, auth, profiles
-    ├── projects/       # Projects, Applications; all role-scoped URLs
-    ├── reports/        # Bug reports with Cloudinary screenshot upload
-    └── tasks/          # Celery email tasks
+├── backend/            # Django REST Framework API (Powered by Supabase PostgreSQL)
+│   ├── apps/           # Core applications (users, projects, reports, tasks)
+│   ├── fixmybits/      # Core settings and routing
+│   └── manage.py       
+├── frontend/           # Next.js React UI 
+└── README.md
 ```
 
 ---
 
-## 🚀 Quick Start
+## 🚀 Backend Quick Start
 
-### 1. Clone & create a virtual environment
+The backend is a robust Python Django application.
+
+### 1. CD into the Backend & Create Environment
 
 ```bash
+cd backend
+
+# Create Virtual Environment
 python -m venv venv
-# Windows
+
+# Activate (Windows)
 venv\Scripts\activate
-# macOS/Linux
+# Activate (macOS/Linux)
 source venv/bin/activate
 ```
 
@@ -51,69 +52,51 @@ cp .env.example .env
 #   SECRET_KEY, DATABASE_URL, REDIS_URL, CLOUDINARY_*, EMAIL_*
 ```
 
-### 4. Run database migrations
+### 4. Database Setup (Supabase)
+
+This app is natively configured to run on a managed **Supabase PostgreSQL** cloud instance. Ensure your Supabase `DATABASE_URL` is in your `.env`.
 
 ```bash
+# Push schema to Supabase
 python manage.py makemigrations users projects reports
 python manage.py migrate
-```
 
-### 5. Create a superuser (admin)
+# Seed dummy data (creates 3 startups and 10 testers)
+python seed_data.py
 
-```bash
+# Create a superuser (admin)
 python manage.py createsuperuser
-# Enter email and password when prompted
 ```
 
-### 6. Start the development server
+### 5. Start the development server
 
 ```bash
 python manage.py runserver
 ```
 
-API is available at: `http://127.0.0.1:8000/api/`  
-Django Admin: `http://127.0.0.1:8000/admin/`
+* API is available at: `http://127.0.0.1:8000/api/`  
+* API Swagger Docs: `http://127.0.0.1:8000/api/docs/`
+* Django Admin: `http://127.0.0.1:8000/admin/`
 
 ---
 
-## ⚙️ Running Celery
+## ⚙️ Running Celery (Async Emails)
 
-Celery requires Redis. Make sure Redis is running, then:
+Celery requires Redis. Make sure Redis is running locally, then open a separate terminal:
 
 ```bash
-# Start Celery worker (separate terminal)
-# Note for Windows users: Add --pool=solo to avoid multiprocessing errors!
+cd backend
+venv\Scripts\activate
+
+# Start Celery worker (Windows users must append --pool=solo)
 celery -A fixmybits worker --loglevel=info --pool=solo
-
-# Optional: Start Celery Beat for scheduled tasks
-celery -A fixmybits beat --loglevel=info
-
-# Monitor tasks with Flower (optional)
-pip install flower
-celery -A fixmybits flower
-```
-
----
-
-## 🗄️ Database
-
-`DATABASE_URL` follows the `dj-database-url` format:
-
-```
-# PostgreSQL (Production)
-DATABASE_URL=postgres://USER:PASSWORD@HOST:5432/fixmybits
-
-# SQLite (Local Dev Fallback) 
-# Leave DATABASE_URL blank or map it to sqlite explicitly to use a local db.sqlite3 file
-DATABASE_URL=sqlite:///db.sqlite3
 ```
 
 ---
 
 ## ☁️ Cloudinary (Screenshot Uploads)
 
-If Cloudinary env vars are set, all `Report.screenshot` uploads go to Cloudinary.
-If not set, files are stored locally under `media/`.
+Bug reports support direct screenshot file uploads. Add your Cloudinary API keys to your `.env` to allow successful file storage:
 
 ```env
 CLOUDINARY_CLOUD_NAME=your_cloud_name
@@ -123,107 +106,17 @@ CLOUDINARY_API_SECRET=your_api_secret
 
 ---
 
-## 📬 Email Notifications
+## 🔐 API Reference
 
-Set `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend` in production.  
-For development, use the console backend (default): emails are printed to stdout.
-
----
-
-## 🔐 API Endpoints
-
-### Auth (`/api/auth/`)
-
-| Method | Endpoint                    | Description                          | Auth |
-|--------|-----------------------------|--------------------------------------|------|
-| POST   | `/register/`                | Register user + create role profile  | No   |
-| POST   | `/login/`                   | Get JWT access + refresh tokens      | No   |
-| POST   | `/logout/`                  | Blacklist refresh token              | Yes  |
-| POST   | `/token/refresh/`           | Refresh access token                 | No   |
-| GET    | `/me/`                      | Current user info                    | Yes  |
-| POST   | `/password-reset/`          | Request password reset email         | No   |
-| POST   | `/password-reset-confirm/`  | Confirm & apply new password         | No   |
-
-### Startup (`/api/startup/`)
-
-| Method | Endpoint                           | Description                      |
-|--------|------------------------------------|----------------------------------|
-| GET    | `/projects/`                       | List own projects (paginated)    |
-| POST   | `/projects/`                       | Create project (draft)           |
-| GET    | `/projects/{id}/`                  | Get project detail               |
-| POST   | `/projects/{id}/submit/`           | Submit draft project to admins   |
-| POST   | `/projects/{id}/complete/`         | Mark in-progress project as done |
-| GET    | `/projects/{id}/applications/`     | List applications for a project  |
-| GET    | `/projects/{id}/reports/`          | List approved reports for project|
-| PATCH  | `/reports/{id}/mark_fixed/`        | Mark approved report as fixed    |
-
-### Tester (`/api/tester/`)
-
-| Method | Endpoint                           | Description                      |
-|--------|------------------------------------|----------------------------------|
-| GET    | `/profile/`                        | View tester profile              |
-| PUT    | `/profile/`                        | Update tester profile            |
-| GET    | `/projects/open/`                  | List open projects (paginated)   |
-| POST   | `/projects/{id}/apply/`            | Apply to a project               |
-| DELETE | `/applications/{id}/`              | Withdraw a pending application   |
-| GET    | `/projects/assigned/`              | List assigned projects           |
-| POST   | `/projects/{id}/reports/`          | Submit a bug report (file/drive) |
-| GET    | `/reports/`                        | List own reports                 |
-| PUT    | `/reports/{id}/`                   | Edit a pending report            |
-| DELETE | `/reports/{id}/`                   | Retract/Delete a pending report  |
-
-### Admin (`/api/admin/`)
-
-| Method | Endpoint                           | Description                      |
-|--------|------------------------------------|----------------------------------|
-| GET    | `/pending-users/`                  | List unapproved users (paginated)|
-| POST   | `/users/{id}/approve/`             | Approve a user                   |
-| GET    | `/pending-projects/`               | List pending projects            |
-| POST   | `/projects/{id}/approve/`          | Approve project (to OPEN status) |
-| POST   | `/projects/{id}/reject/`           | Reject a pending project         |
-| POST   | `/projects/{id}/reopen/`           | Reopen rejected/completed project|
-| GET    | `/available-testers/`              | List approved testers            |
-| POST   | `/projects/{id}/assign/`           | Assign tester to project manually|
-| GET    | `/applications/`                   | View all platform applications   |
-| POST   | `/applications/{id}/accept/`       | Assign tester by accepting app   |
-| GET    | `/pending-reports/`                | List reports pending review      |
-| POST   | `/reports/{id}/review/`            | Approve/spam/duplicate a report  |
-
-**Note:** All DRF list-based endpoints natively support `?search=` and `?ordering=` syntax natively via generic APIs for heavily simplified filtering operations.
-
----
-
-## 🔑 Authentication Flow
-
-```
-POST /api/auth/register/     → account created (pending approval)
-POST /api/admin/users/{id}/approve/  → admin approves account
-POST /api/auth/login/        → returns { "access": "...", "refresh": "..." }
-
-# Use access token in subsequent requests:
-Authorization: Bearer <access_token>
-```
-
----
-
-## 👥 Roles
-
-| Role    | Description                                          |
-|---------|------------------------------------------------------|
-| startup | Creates projects, views approved reports             |
-| tester  | Browses/applies to projects, submits bug reports     |
-| admin   | Approves users/projects, assigns testers, moderates  |
+For a full list of interactive endpoints, launch the server and visit `http://127.0.0.1:8000/api/docs/`. It documents all Auth, Startup, Tester, and Admin workflows automatically.
 
 ---
 
 ## 🏃 Production Deployment
 
+The backend contains a production-ready `Dockerfile` and `docker-compose.yml`.
+
 ```bash
-# Collect static files
-python manage.py collectstatic --noinput
-
-# Run with gunicorn
-gunicorn fixmybits.wsgi:application --bind 0.0.0.0:8000 --workers 4
+cd backend
+docker-compose up --build -d
 ```
-
-Set `DEBUG=False` and configure `ALLOWED_HOSTS` appropriately.
