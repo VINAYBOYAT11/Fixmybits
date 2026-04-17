@@ -5,16 +5,16 @@ import os
 BASE_URL = "http://127.0.0.1:8000/api"
 
 def print_step(msg):
-    print(f"\n[{'*'*20}]")
-    print(f"➜ {msg}")
-    print(f"[{'*'*20}]")
+    print(f"\n[{'='*20}]")
+    print(f" STEP: {msg}")
+    print(f"[{'='*20}]")
 
 def login(email, password="password123"):
     res = requests.post(f"{BASE_URL}/auth/login/", json={"email": email, "password": password})
     if res.status_code != 200:
         print(f"Login failed for {email}: {res.text}")
         exit(1)
-    print(f"✅ Logged in successfully as {email}")
+    print(f"[OK] Logged in successfully as {email}")
     return res.json()["access"]
 
 def auth_headers(token):
@@ -38,17 +38,17 @@ res = requests.post(
 )
 assert res.status_code == 201, f"Failed to create project: {res.text}"
 project_id = res.json()["id"]
-print(f"✅ Project Created! ID: {project_id}")
+print(f"[OK] Project Created! ID: {project_id}")
 
 print_step("1.5. Startup Submits Project")
 res = requests.post(f"{BASE_URL}/startup/projects/{project_id}/submit/", headers=auth_headers(startup_token))
 assert res.status_code == 200, f"Startup failed to submit project: {res.text}"
-print("✅ Startup submitted project for approval")
+print("[OK] Startup submitted project for approval")
 
 print_step("2. Admin Approves Project")
 res = requests.post(f"{BASE_URL}/admin/projects/{project_id}/approve/", headers=auth_headers(admin_token), json={"action": "approve"})
 assert res.status_code == 200, f"Admin failed to approve project: {res.text}"
-print("✅ Admin Approved Project")
+print("[OK] Admin Approved Project")
 
 print_step("3.5. Tester Cancels an Application")
 # Let's create a dummy project just to test cancellation
@@ -67,14 +67,14 @@ app_cancel_id = res_apply_dummy.json()["id"]
 
 res_cancel = requests.delete(f"{BASE_URL}/tester/applications/{app_cancel_id}/", headers=auth_headers(tester_token))
 assert res_cancel.status_code == 204, f"Tester cancel failed: {res_cancel.text}"
-print("✅ Tester successfully cancelled application")
+print("[OK] Tester successfully cancelled application")
 
 print_step("3. Tester Fetches Open Projects & Applies (Primary)")
 res_open = requests.get(f"{BASE_URL}/tester/projects/open/", headers=auth_headers(tester_token))
 assert res_open.status_code == 200
 res_apply = requests.post(f"{BASE_URL}/tester/projects/{project_id}/apply/", headers=auth_headers(tester_token))
 assert res_apply.status_code == 201, f"Tester apply failed: {res_apply.text}"
-print("✅ Tester successfully applied")
+print("[OK] Tester successfully applied")
 
 print_step("4. Admin Assigns Tester via Application Accept")
 # we need tester's user ID
@@ -91,7 +91,7 @@ application_id = apps[0]["id"]
 
 res = requests.post(f"{BASE_URL}/admin/applications/{application_id}/accept/", headers=auth_headers(admin_token))
 assert res.status_code == 200, f"Admin application accept failed: {res.text}"
-print("✅ Admin assigned tester to project by accepting application")
+print("[OK] Admin assigned tester to project by accepting application")
 
 print_step("5. Tester Submits Bug Report")
 # Create a valid dummy GIF file for upload
@@ -119,7 +119,7 @@ if res.status_code == 500:
     print(f"500 ERROR: {m.group(1) if m else 'No title'}")
 assert res.status_code == 201, f"Report creation failed: {res.status_code}"
 report_id = res.json()["id"]
-print(f"✅ Tester submitted bug report with Screenshot! ID: {report_id}")
+print(f"[OK] Tester submitted bug report with Screenshot! ID: {report_id}")
 os.remove(dummy_img_path)
 
 print_step("5.5 Tester Submits Report with Google Drive Link")
@@ -136,27 +136,27 @@ res = requests.post(
 )
 assert res.status_code == 201, f"Report with drive link creation failed: {res.text}"
 drive_report_id = res.json()["id"]
-print(f"✅ Tester submitted bug report with Google Drive link! ID: {drive_report_id}")
+print(f"[OK] Tester submitted bug report with Google Drive link! ID: {drive_report_id}")
 
 print_step("6. Admin Approves Bug Report")
 res = requests.post(f"{BASE_URL}/admin/reports/{report_id}/review/", headers=auth_headers(admin_token), json={"action": "approve"})
 assert res.status_code == 200, f"Admin report review failed: {res.text}"
-print("✅ Admin approved the bug report")
+print("[OK] Admin approved the bug report")
 
 print_step("7. Startup Marks Report as Fixed")
 res = requests.patch(f"{BASE_URL}/startup/reports/{report_id}/mark_fixed/", headers=auth_headers(startup_token))
 assert res.status_code == 200, f"Startup failed to mark as fixed: {res.text}"
-print("✅ Startup marked report as FIXED")
+print("[OK] Startup marked report as FIXED")
 
 print_step("8. Testing Generics List View Search")
 res = requests.get(f"{BASE_URL}/admin/available-testers/?search=tester2", headers=auth_headers(admin_token))
 assert res.status_code == 200
 assert res.json()["count"] >= 1
-print("✅ Admin Generics Search works correctly")
+print("[OK] Admin Generics Search works correctly")
 
 print_step("9. Testing Password Reset Workflow")
 res = requests.post(f"{BASE_URL}/auth/password-reset/", json={"email": "startup2@example.com"})
 assert res.status_code == 200, f"Password reset request failed: {res.text}"
-print("✅ Password reset token successfully requested")
+print("[OK] Password reset token successfully requested")
 
-print_step("🎉 All Endpoints Validated! The workflow is 100% operational.")
+print_step("[DONE] All Endpoints Validated! The workflow is 100% operational.")

@@ -1,3 +1,4 @@
+
 """
 Auth views for FixMyBits.
 """
@@ -195,7 +196,7 @@ class PasswordResetRequestView(APIView):
                 
                 uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
                 token = default_token_generator.make_token(user)
-                reset_link = f"http://localhost:3000/reset-password?uid={uidb64}&token={token}"
+                reset_link = f"http://127.0.0.1:5500/#/reset-password?uid={uidb64}&token={token}"
                 
                 from apps.tasks.email_tasks import send_password_reset_email
                 send_password_reset_email.delay(email, reset_link)

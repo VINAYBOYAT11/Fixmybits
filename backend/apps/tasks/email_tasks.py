@@ -278,7 +278,40 @@ If you did not request this, please ignore this email. Your password will remain
             fail_silently=False,
         )
         logger.info("Password reset email sent to %s", user_email)
-
     except Exception as exc:
         logger.error("Failed to send password reset email: %s", exc)
+        raise self.retry(exc=exc)
+
+
+@shared_task(bind=True, max_retries=3, default_retry_delay=60)
+def send_project_approved_email(self, project_id: str, startup_email: str):
+    """
+    Notify the startup that their project has been approved by an admin and is now open.
+    """
+    try:
+        from apps.projects.models import Project
+        project = Project.objects.get(id=project_id)
+
+        subject = f"[FixMyBits] Your project '{project.name}' is now LIVE!"
+        message = f"""
+Hi,
+
+Your project '{project.name}' has been reviewed and approved by our admin team. It is now open for applications from security testers.
+
+You can view your project and track incoming applications on your dashboard.
+
+– The FixMyBits Team
+        """.strip()
+
+        send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[startup_email],
+            fail_silently=False,
+        )
+        logger.info("Project approved email sent to %s for project %s", startup_email, project_id)
+
+    except Exception as exc:
+        logger.error("Failed to send project approved email: %s", exc)
         raise self.retry(exc=exc)

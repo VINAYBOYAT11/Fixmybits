@@ -11,12 +11,15 @@ from apps.projects.views import (
     AdminAssignTesterView,
     AdminPendingReportsView,
     AdminReviewReportView,
+    AdminStatsView,
     AdminApplicationListView,
     AdminApplicationAcceptView,
     AdminApplicationRejectView,
 )
 
 urlpatterns = [
+    # Stats
+    path("stats/", AdminStatsView.as_view(), name="admin-stats"),
     # Users
     path("pending-users/", AdminPendingUsersView.as_view(), name="admin-pending-users"),
     path("users/<uuid:pk>/approve/", AdminApproveUserView.as_view(), name="admin-approve-user"),

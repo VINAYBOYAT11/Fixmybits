@@ -115,9 +115,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         experience_level = validated_data.pop("experience_level", TesterProfile.ExperienceLevel.BEGINNER)
         bio = validated_data.pop("bio", "")
 
-        # Admin role gets auto-approved (should be rare, handled by superusers)
+        # All new users are automatically approved.
+        # Only admins get staff permissions.
+        validated_data["is_approved"] = True
         if role == User.Role.ADMIN:
-            validated_data["is_approved"] = True
             validated_data["is_staff"] = True
 
         user = User.objects.create_user(**validated_data)

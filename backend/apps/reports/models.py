@@ -60,3 +60,27 @@ class Report(models.Model):
         if self.screenshot:
             return self.screenshot.url
         return None
+
+
+class ReportMessage(models.Model):
+    """A chat message on a bug report, between the tester and the startup."""
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    report = models.ForeignKey(
+        Report, on_delete=models.CASCADE, related_name="messages"
+    )
+    sender = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="report_messages",
+    )
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        verbose_name = "Report Message"
+        verbose_name_plural = "Report Messages"
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.sender.email} on [{self.report.title[:30]}]"

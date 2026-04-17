@@ -43,6 +43,7 @@ backend/media/
 *.swp
 *.swo
 .DS_Store
+Thumbs.db
 
 # Celery
 celerybeat-schedule
@@ -57,3 +58,16 @@ htmlcov/
 
 # mypy
 .mypy_cache/
+
+# ── AI Coding Assistant files (not part of the project) ──
+bedrock-long-term-api-key.csv
+bedrock_helper.py
+coding-buddy_accessKeys.csv
+coding-buddy_credentials.csv
+coding_assistant.py
+CODING_ASSISTANT_README.md
+conversation_history.json
+list_models.py
+setup_bedrock_access.md
+test_bedrock.py
+bed

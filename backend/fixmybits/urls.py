@@ -38,6 +38,7 @@ urlpatterns = [
     path("api/startup/", include("apps.projects.urls.startup")),
     path("api/tester/", include("apps.projects.urls.tester")),
     path("api/admin/", include("apps.projects.urls.admin_urls")),
+    path("api/reports/", include("apps.reports.urls")),  # Report chat messages
 ]
 
 # Serve media files in development

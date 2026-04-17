@@ -20,6 +20,7 @@ from apps.tasks.email_tasks import (
     send_application_rejected_email,
     send_project_completed_email,
     send_project_submitted_for_approval_email,
+    send_project_approved_email,
 )
 
 from .models import Application, Project
@@ -120,10 +121,11 @@ class StartupProjectSubmitView(APIView):
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
+        # Submit for approval instead of direct publishing
         project.status = Project.Status.PENDING_APPROVAL
         project.save(update_fields=["status"])
 
-        # Notify admins asynchronously
+        # Notify admins
         send_project_submitted_for_approval_email.delay(str(project.id))
 
         return Response(ProjectSerializer(project).data)
@@ -169,7 +171,7 @@ class StartupProjectReportsView(generics.ListAPIView):
     search_fields = ["title", "tester__email"]
 
     def get_queryset(self):
-        return Report.objects.filter(project_id=self.kwargs.get("pk"), status=Report.Status.APPROVED)
+        return Report.objects.filter(project_id=self.kwargs.get("pk")).exclude(status__in=[Report.Status.SPAM, Report.Status.DUPLICATE])
 
     @extend_schema(responses={200: ReportSerializer(many=True)}, tags=["startup"])
     def get(self, request, *args, **kwargs):
@@ -198,6 +200,22 @@ class StartupMarkReportFixedView(APIView):
         report.status = Report.Status.FIXED
         report.save(update_fields=["status"])
         return Response(ReportSerializer(report).data)
+
+
+class StartupAllReportsView(generics.ListAPIView):
+    """
+    GET /api/startup/reports/  – all non-spam/duplicate reports across all startup projects
+    """
+    permission_classes = [IsStartup]
+    serializer_class = ReportSerializer
+    filterset_fields = ["status", "severity"]
+    ordering_fields = ["submitted_at", "severity"]
+    search_fields = ["title", "tester__email", "project__name"]
+
+    def get_queryset(self):
+        return Report.objects.filter(
+            project__startup=self.request.user
+        ).exclude(status__in=[Report.Status.SPAM, Report.Status.DUPLICATE])
 
 
 class StartupProjectApplicationsView(generics.ListAPIView):
@@ -531,6 +549,10 @@ class AdminApproveProjectView(APIView):
 
         project.status = Project.Status.OPEN
         project.save(update_fields=["status"])
+
+        # Notify startup
+        send_project_approved_email.delay(str(project.id), project.startup.email)
+
         return Response(ProjectSerializer(project).data)
 
 
@@ -707,6 +729,78 @@ class AdminReviewReportView(APIView):
             profile.save(update_fields=["reputation_score"])
 
         return Response(ReportSerializer(report).data)
+
+
+class AdminStatsView(APIView):
+    """GET /api/admin/stats/ – platform-wide statistics for admin dashboard."""
+    permission_classes = [IsAdminRole]
+
+    @extend_schema(
+        responses={200: inline_serializer(name="AdminStatsResp", fields={
+            "users": serializers.DictField(),
+            "projects": serializers.DictField(),
+            "reports": serializers.DictField(),
+            "applications": serializers.DictField(),
+        })},
+        tags=["admin"]
+    )
+    def get(self, request):
+        # User stats
+        user_qs = User.objects.all()
+        users = {
+            "total": user_qs.count(),
+            "testers": user_qs.filter(role="tester").count(),
+            "startups": user_qs.filter(role="startup").count(),
+            "admins": user_qs.filter(role="admin").count(),
+            "approved": user_qs.filter(is_approved=True).count(),
+            "pending": user_qs.filter(is_approved=False, is_active=True).count(),
+            "banned": user_qs.filter(is_banned=True).count(),
+        }
+
+        # Project stats
+        project_qs = Project.objects.all()
+        projects = {
+            "total": project_qs.count(),
+            "draft": project_qs.filter(status=Project.Status.DRAFT).count(),
+            "pending_approval": project_qs.filter(status=Project.Status.PENDING_APPROVAL).count(),
+            "open": project_qs.filter(status=Project.Status.OPEN).count(),
+            "in_progress": project_qs.filter(status=Project.Status.IN_PROGRESS).count(),
+            "completed": project_qs.filter(status=Project.Status.COMPLETED).count(),
+            "rejected": project_qs.filter(status=Project.Status.REJECTED).count(),
+        }
+
+        # Report stats
+        report_qs = Report.objects.all()
+        reports = {
+            "total": report_qs.count(),
+            "pending": report_qs.filter(status=Report.Status.PENDING_ADMIN_REVIEW).count(),
+            "approved": report_qs.filter(status=Report.Status.APPROVED).count(),
+            "fixed": report_qs.filter(status=Report.Status.FIXED).count(),
+            "spam": report_qs.filter(status=Report.Status.SPAM).count(),
+            "duplicate": report_qs.filter(status=Report.Status.DUPLICATE).count(),
+            "by_severity": {
+                "Critical": report_qs.filter(severity=Report.Severity.CRITICAL).count(),
+                "High": report_qs.filter(severity=Report.Severity.HIGH).count(),
+                "Medium": report_qs.filter(severity=Report.Severity.MEDIUM).count(),
+                "Low": report_qs.filter(severity=Report.Severity.LOW).count(),
+            },
+        }
+
+        # Application stats
+        app_qs = Application.objects.all()
+        applications = {
+            "total": app_qs.count(),
+            "pending": app_qs.filter(status=Application.Status.PENDING).count(),
+            "accepted": app_qs.filter(status=Application.Status.ACCEPTED).count(),
+            "rejected": app_qs.filter(status=Application.Status.REJECTED).count(),
+        }
+
+        return Response({
+            "users": users,
+            "projects": projects,
+            "reports": reports,
+            "applications": applications,
+        })
 
 
 class AdminApplicationListView(generics.ListAPIView):

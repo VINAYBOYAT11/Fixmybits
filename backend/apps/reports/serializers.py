@@ -3,7 +3,7 @@ Serializers for the reports app.
 """
 from rest_framework import serializers
 
-from .models import Report
+from .models import Report, ReportMessage
 
 
 class ReportSerializer(serializers.ModelSerializer):
@@ -88,4 +88,16 @@ class ReportUpdateSerializer(serializers.ModelSerializer):
             "drive_link",
         ]
         extra_kwargs = {"screenshot": {"required": False, "allow_null": True}}
+
+
+class ReportMessageSerializer(serializers.ModelSerializer):
+    """A single chat message on a report."""
+
+    sender_email = serializers.EmailField(source="sender.email", read_only=True)
+    sender_role  = serializers.CharField(source="sender.role",  read_only=True)
+
+    class Meta:
+        model = ReportMessage
+        fields = ["id", "report", "sender", "sender_email", "sender_role", "content", "created_at"]
+        read_only_fields = ["id", "report", "sender", "sender_email", "sender_role", "created_at"]
 

@@ -7,6 +7,7 @@ from apps.projects.views import (
     StartupProjectCompleteView,
     StartupProjectReportsView,
     StartupMarkReportFixedView,
+    StartupAllReportsView,
     StartupProjectApplicationsView,
     StartupProfileView,
 )
@@ -22,5 +23,6 @@ urlpatterns = [
     path("projects/<uuid:pk>/reports/", StartupProjectReportsView.as_view(), name="startup-project-reports"),
     path("projects/<uuid:pk>/applications/", StartupProjectApplicationsView.as_view(), name="startup-project-applications"),
     # Reports
+    path("reports/", StartupAllReportsView.as_view(), name="startup-all-reports"),
     path("reports/<uuid:pk>/mark_fixed/", StartupMarkReportFixedView.as_view(), name="startup-mark-report-fixed"),
 ]
