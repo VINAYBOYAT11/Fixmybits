@@ -85,7 +85,7 @@ WSGI_APPLICATION = "fixmybits.wsgi.application"
 
 # Database
 DATABASES = {
-    "default": env.db("DATABASE_URL", default="sqlite:///db.sqlite3"),
+    "default": env.db("DATABASE_URL", default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}"),
 }
 
 # Custom user model
@@ -172,7 +172,16 @@ SIMPLE_JWT = {
 # CORS
 CORS_ALLOWED_ORIGINS = env.list(
     "CORS_ALLOWED_ORIGINS",
-    default=["http://localhost:3000", "http://127.0.0.1:3000"],
+    default=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:8080",
+        "http://127.0.0.1:8080",
+        "http://localhost:5500",
+        "http://127.0.0.1:5500",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ],
 )
 CORS_ALLOW_CREDENTIALS = True
 
@@ -180,7 +189,7 @@ CORS_ALLOW_CREDENTIALS = True
 CELERY_BROKER_URL = env("CELERY_BROKER_URL", default="redis://localhost:6379/1")
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TASK_SERIALIZER = "json"
-CELERY_TASK_ALWAYS_EAGER = True   # added to bypass redis for local connection testing
+CELERY_TASK_ALWAYS_EAGER = env.bool("CELERY_TASK_ALWAYS_EAGER", default=True)
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_TIMEZONE = "UTC"
 CELERY_TASK_TRACK_STARTED = True
