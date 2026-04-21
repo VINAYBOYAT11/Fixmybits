@@ -3,6 +3,7 @@ Serializers for the users app.
 """
 from django.contrib.auth import get_user_model
 from django.db import transaction
+import re
 from rest_framework import serializers
 
 from .models import StartupProfile, TesterProfile
@@ -115,8 +116,8 @@ class RegisterSerializer(serializers.ModelSerializer):
         experience_level = validated_data.pop("experience_level", TesterProfile.ExperienceLevel.BEGINNER)
         bio = validated_data.pop("bio", "")
 
-        # All new users are automatically approved.
-        # Only admins get staff permissions.
+        # Auto-approve all users for better consumer experience
+        # Only admins get staff permissions
         validated_data["is_approved"] = True
         if role == User.Role.ADMIN:
             validated_data["is_staff"] = True
@@ -160,3 +161,30 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if attrs["new_password"] != attrs["confirm_password"]:
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
         return attrs
+
+
+class ContactRequestSerializer(serializers.Serializer):
+    name = serializers.CharField(max_length=100)
+    email = serializers.EmailField()
+    message = serializers.CharField(max_length=2000)
+    category = serializers.ChoiceField(
+        choices=["general", "startup", "tester", "partnership"],
+        default="general",
+        required=False,
+    )
+
+    def _sanitize(self, value: str) -> str:
+        normalized = re.sub(r"[\x00-\x1f\x7f]", "", value)
+        return normalized.strip()
+
+    def validate_name(self, value: str) -> str:
+        cleaned = self._sanitize(value)
+        if len(cleaned) < 2:
+            raise serializers.ValidationError("Name must be at least 2 characters.")
+        return cleaned
+
+    def validate_message(self, value: str) -> str:
+        cleaned = self._sanitize(value)
+        if len(cleaned) < 10:
+            raise serializers.ValidationError("Message must be at least 10 characters.")
+        return cleaned

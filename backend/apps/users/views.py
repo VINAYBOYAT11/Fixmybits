@@ -3,6 +3,8 @@
 Auth views for FixMyBits.
 """
 from django.contrib.auth import get_user_model
+from django.conf import settings
+from django.core.mail import send_mail
 from rest_framework import status
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -17,6 +19,7 @@ from .serializers import (
     UserSerializer,
     PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer,
+    ContactRequestSerializer,
 )
 
 User = get_user_model()
@@ -32,7 +35,7 @@ class RegisterView(APIView):
     @extend_schema(
         request=RegisterSerializer,
         responses={201: UserSerializer, 400: None},
-        description="Registers a new user. The account will require admin approval.",
+        description="Registers a new user with immediate access.",
         tags=["auth"]
     )
     def post(self, request):
@@ -41,7 +44,7 @@ class RegisterView(APIView):
             user = serializer.save()
             return Response(
                 {
-                    "message": "Registration successful. Your account is pending admin approval.",
+                    "message": "Registration successful! You can now log in.",
                     "user": UserSerializer(user).data,
                 },
                 status=status.HTTP_201_CREATED,
@@ -108,11 +111,8 @@ class LoginView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        if not user.is_approved and user.role != "admin":
-            return Response(
-                {"error": "Your account is pending admin approval."},
-                status=status.HTTP_403_FORBIDDEN,
-            )
+        # Auto-approve all users for better consumer experience
+        # Previously required admin approval, now removed
 
         refresh = RefreshToken.for_user(user)
         return Response(
@@ -196,7 +196,8 @@ class PasswordResetRequestView(APIView):
                 
                 uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
                 token = default_token_generator.make_token(user)
-                reset_link = f"http://127.0.0.1:5500/#/reset-password?uid={uidb64}&token={token}"
+                frontend_url = getattr(settings, "FRONTEND_URL", "http://localhost:5173")
+                reset_link = f"{frontend_url}/reset-password?uid={uidb64}&token={token}"
                 
                 from apps.tasks.email_tasks import send_password_reset_email
                 send_password_reset_email.delay(email, reset_link)
@@ -205,6 +206,43 @@ class PasswordResetRequestView(APIView):
                 pass
             return Response({"message": "If that email is valid, a reset link has been sent."}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+
+class ContactRequestView(APIView):
+    """
+    POST /api/auth/contact/
+    Public contact endpoint used by the landing page.
+    """
+    permission_classes = [AllowAny]
+
+    @extend_schema(
+        request=ContactRequestSerializer,
+        responses={200: inline_serializer("ContactRes", {"message": serializers.CharField()}), 400: None},
+        tags=["auth"],
+    )
+    def post(self, request):
+        serializer = ContactRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+        data = serializer.validated_data
+        subject = f"[FixMyBits Contact] {data.get('category', 'general').title()} inquiry from {data['name']}"
+        body = (
+            f"Name: {data['name']}\n"
+            f"Email: {data['email']}\n"
+            f"Category: {data.get('category', 'general')}\n\n"
+            f"Message:\n{data['message']}"
+        )
+        to_email = getattr(settings, "SUPPORT_EMAIL", "") or settings.DEFAULT_FROM_EMAIL
+
+        send_mail(
+            subject=subject,
+            message=body,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[to_email],
+            fail_silently=False,
+        )
+        return Response({"message": "Thanks for contacting us. We will get back to you soon."}, status=status.HTTP_200_OK)
 
 
 class PasswordResetConfirmView(APIView):

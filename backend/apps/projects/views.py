@@ -282,9 +282,15 @@ class TesterProfileView(APIView):
 
     @extend_schema(responses={200: TesterProfileSerializer}, tags=["tester"])
     def get(self, request):
-        profile = request.user.tester_profile
-        serializer = TesterProfileSerializer(profile)
-        return Response(serializer.data)
+        try:
+            profile = request.user.tester_profile
+            serializer = TesterProfileSerializer(profile)
+            return Response(serializer.data)
+        except Exception:
+            return Response(
+                {"error": "Tester profile not found. Please contact support."},
+                status=status.HTTP_404_NOT_FOUND
+            )
 
     @extend_schema(request=TesterProfileSerializer, responses={200: TesterProfileSerializer}, tags=["tester"])
     def put(self, request):
@@ -491,7 +497,9 @@ class TesterCancelApplicationView(APIView):
 # ──────────────────────────────────────────────────────────────────────────────
 
 class AdminPendingUsersView(generics.ListAPIView):
-    """GET /api/admin/pending-users/ (paginated)"""
+    """GET /api/admin/pending-users/ (paginated)
+    With auto-approval enabled, this list is typically empty.
+    """
     permission_classes = [IsAdminRole]
     serializer_class = UserSerializer
     search_fields = ["email"]

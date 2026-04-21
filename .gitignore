@@ -71,3 +71,14 @@ list_models.py
 setup_bedrock_access.md
 test_bedrock.py
 bed
+
+# Node / JS
+node_modules/
+.npm/
+.yarn/
+.pnpm-store/
+.parcel-cache/
+.cache/
+dist/
+.next/
+out/
