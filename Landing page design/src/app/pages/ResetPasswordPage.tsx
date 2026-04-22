@@ -8,7 +8,8 @@ import { useSearchParams } from "react-router";
 export function ResetPasswordPage() {
   const [searchParams] = useSearchParams();
   const token = searchParams.get("token") || "";
-  
+  const uidb64 = searchParams.get("uid") || "";
+
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -20,15 +21,19 @@ export function ResetPasswordPage() {
       setStatus({ type: "error", message: "Passwords do not match." });
       return;
     }
-    if (!token) {
-      setStatus({ type: "error", message: "Invalid or missing reset token." });
+    if (password.length < 8) {
+      setStatus({ type: "error", message: "Password must be at least 8 characters." });
+      return;
+    }
+    if (!token || !uidb64) {
+      setStatus({ type: "error", message: "Invalid or missing reset link. Please request a new one." });
       return;
     }
 
     setIsSubmitting(true);
     setStatus({ type: "", message: "" });
     try {
-      await confirmPasswordReset({ token, password, confirm_password: confirmPassword });
+      await confirmPasswordReset({ uidb64, token, new_password: password, confirm_password: confirmPassword });
       setStatus({ type: "success", message: "Password reset successfully. You can now login." });
       window.setTimeout(() => {
         window.location.href = "/login";

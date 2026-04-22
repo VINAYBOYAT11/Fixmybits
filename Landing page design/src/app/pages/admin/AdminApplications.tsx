@@ -8,6 +8,12 @@ export function AdminApplications() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState("");
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', text: string) => {
+    setToast({ type, text });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     fetchApps();
@@ -17,8 +23,6 @@ export function AdminApplications() {
     setLoading(true);
     adminApi.getApplications()
       .then((data: any) => {
-        // filter out only pending locally if backend returns all, or rely on API query.
-        // the endpoint allows ?status=pending but we'll filter locally if it returns all.
         const allApps = data.results || [];
         setApplications(allApps.filter((a: Application) => a.status === 'pending'));
       })
@@ -27,17 +31,20 @@ export function AdminApplications() {
   };
 
   const handleAction = async (id: string, action: 'accept' | 'reject') => {
+    const label = action === 'accept' ? 'Accept' : 'Reject';
+    if (!window.confirm(`${label} this application?`)) return;
     setActionLoading(id);
     try {
       if (action === 'accept') {
         await adminApi.acceptApplication(id);
-        alert(`Application accepted. Tester has been assigned to the project.`);
+        showToast('success', 'Application accepted. Tester has been assigned to the project.');
       } else {
         await adminApi.rejectApplication(id);
+        showToast('success', 'Application rejected.');
       }
       setApplications(applications.filter(a => a.id !== id));
     } catch (err: any) {
-      alert(err.message || `Failed to ${action} application.`);
+      showToast('error', err.message || `Failed to ${action} application.`);
     } finally {
       setActionLoading("");
     }
@@ -46,6 +53,12 @@ export function AdminApplications() {
   return (
     <DashboardLayout role="admin" title="Tester Applications">
       <div className="max-w-5xl space-y-6">
+        
+        {toast && (
+          <div className={`p-4 rounded-2xl border-2 font-semibold text-sm ${toast.type === 'success' ? 'border-green-500 bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200' : 'border-red-500 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200'}`}>
+            {toast.text}
+          </div>
+        )}
         
         {loading ? (
           <div className="flex justify-center py-16"><div className="w-10 h-10 rounded-full border-4 animate-spin border-[var(--primary)] border-t-transparent" /></div>
@@ -67,7 +80,7 @@ export function AdminApplications() {
                   <div className="flex-1 space-y-4">
                     <div>
                       <h3 className="text-xl font-bold font-heading">
-                        Project ID: {(app as any).project || "Unknown Project"}
+                        {(app as any).project_name || `Project: ${(app as any).project || "Unknown"}`}
                       </h3>
                       <p className="text-sm opacity-60">Applied on {new Date(app.applied_at).toLocaleDateString()}</p>
                     </div>

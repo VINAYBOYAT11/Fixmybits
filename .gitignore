@@ -59,18 +59,21 @@ htmlcov/
 # mypy
 .mypy_cache/
 
-# ── AI Coding Assistant files (not part of the project) ──
+# ── Secrets / credentials (never commit these) ──
+secrets/
+*.csv
+*credentials*.json
+*client_secret*.json
+*service_account*.json
 bedrock-long-term-api-key.csv
-bedrock_helper.py
 coding-buddy_accessKeys.csv
 coding-buddy_credentials.csv
-coding_assistant.py
-CODING_ASSISTANT_README.md
 conversation_history.json
+
+# ── AI Coding Assistant files (moved to tools/) ──
 list_models.py
 setup_bedrock_access.md
 test_bedrock.py
-bed
 
 # Node / JS
 node_modules/
@@ -82,3 +85,9 @@ node_modules/
 dist/
 .next/
 out/
+
+# Graphify (nested git repo + auto-generated output)
+graphify/
+graphify-out/
+.graphify_detect.json
+.graphify_python

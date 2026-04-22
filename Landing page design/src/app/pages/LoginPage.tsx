@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { motion } from "motion/react";
 import { loginUser } from "../lib/api";
+import { setTokens } from "../lib/auth";
 import { ArrowRight } from "lucide-react";
 
 export function LoginPage() {
@@ -29,13 +30,11 @@ export function LoginPage() {
     setStatus({ type: "", message: "" });
     try {
       const response = await loginUser({ email: email.trim().toLowerCase(), password });
-      localStorage.setItem("fixmybits_access_token", response.access);
-      localStorage.setItem("fixmybits_refresh_token", response.refresh);
-      localStorage.setItem("fixmybits_user", JSON.stringify(response.user));
+      setTokens(response.access, response.refresh, response.user);
       setStatus({ type: "success", message: `Welcome back, ${response.user.email}! Redirecting...` });
       window.setTimeout(() => {
         const role = response.user.role;
-        window.location.href = role === "startup" ? "/startup/dashboard" : role === "tester" ? "/tester/dashboard" : "/";
+        window.location.href = role === "startup" ? "/startup/dashboard" : role === "tester" ? "/tester/dashboard" : "/admin/dashboard";
       }, 700);
     } catch (error) {
       setStatus({
@@ -79,6 +78,7 @@ export function LoginPage() {
                 onChange={(e) => setEmail(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-transparent"
                 placeholder="you@example.com"
+                autoComplete="email"
               />
             </label>
 
@@ -91,6 +91,7 @@ export function LoginPage() {
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-transparent"
                 placeholder="Your password"
+                autoComplete="current-password"
               />
             </label>
 

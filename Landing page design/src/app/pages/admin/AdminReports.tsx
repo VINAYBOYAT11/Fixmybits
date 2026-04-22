@@ -11,6 +11,12 @@ export function AdminReports() {
   const [actionLoading, setActionLoading] = useState("");
   const [activeFeedback, setActiveFeedback] = useState<string | null>(null);
   const [feedbackText, setFeedbackText] = useState("");
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', text: string) => {
+    setToast({ type, text });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     fetchReports();
@@ -31,9 +37,9 @@ export function AdminReports() {
       setReports(reports.filter(r => r.id !== id));
       setActiveFeedback(null);
       setFeedbackText("");
-      alert(`Report marked as ${action}.`);
+      showToast('success', `Report marked as ${action}.`);
     } catch (err: any) {
-      alert(err.message || `Failed to review report.`);
+      showToast('error', err.message || `Failed to review report.`);
     } finally {
       setActionLoading("");
     }
@@ -42,6 +48,12 @@ export function AdminReports() {
   return (
     <DashboardLayout role="admin" title="Review Bug Reports">
       <div className="max-w-6xl space-y-6">
+        
+        {toast && (
+          <div className={`p-4 rounded-2xl border-2 font-semibold text-sm ${toast.type === 'success' ? 'border-green-500 bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200' : 'border-red-500 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200'}`}>
+            {toast.text}
+          </div>
+        )}
         
         {loading ? (
           <div className="flex justify-center py-16"><div className="w-10 h-10 rounded-full border-4 animate-spin border-[var(--primary)] border-t-transparent" /></div>

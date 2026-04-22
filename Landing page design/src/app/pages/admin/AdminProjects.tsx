@@ -10,6 +10,12 @@ export function AdminProjects() {
   const [actionLoading, setActionLoading] = useState("");
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
+  const [toast, setToast] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+
+  const showToast = (type: 'success' | 'error', text: string) => {
+    setToast({ type, text });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   useEffect(() => {
     adminApi.getPendingProjects()
@@ -19,13 +25,14 @@ export function AdminProjects() {
   }, []);
 
   const handleApprove = async (id: string, name: string) => {
+    if (!window.confirm(`Approve project "${name}"? It will become open for tester applications.`)) return;
     setActionLoading(id);
     try {
       await adminApi.approveProject(id);
       setProjects(projects.filter(p => p.id !== id));
-      alert(`Project "${name}" approved. It is now open for tester applications.`);
+      showToast('success', `Project "${name}" approved and is now live.`);
     } catch (err: any) {
-      alert(err.message || "Failed to approve project.");
+      showToast('error', err.message || "Failed to approve project.");
     } finally {
       setActionLoading("");
     }
@@ -41,9 +48,9 @@ export function AdminProjects() {
       setProjects(projects.filter(p => p.id !== rejectId));
       setRejectId(null);
       setRejectReason("");
-      alert(`Project rejected.`);
+      showToast('success', 'Project rejected.');
     } catch (err: any) {
-      alert(err.message || "Failed to reject project.");
+      showToast('error', err.message || "Failed to reject project.");
     } finally {
       setActionLoading("");
     }
@@ -52,6 +59,12 @@ export function AdminProjects() {
   return (
     <DashboardLayout role="admin" title="Pending Projects">
       <div className="max-w-6xl space-y-6">
+        
+        {toast && (
+          <div className={`p-4 rounded-2xl border-2 font-semibold text-sm ${toast.type === 'success' ? 'border-green-500 bg-green-50 dark:bg-green-950 text-green-800 dark:text-green-200' : 'border-red-500 bg-red-50 dark:bg-red-950 text-red-800 dark:text-red-200'}`}>
+            {toast.text}
+          </div>
+        )}
         
         {loading ? (
           <div className="flex justify-center py-16"><div className="w-10 h-10 rounded-full border-4 animate-spin border-[var(--primary)] border-t-transparent" /></div>

@@ -49,20 +49,22 @@ class UserSerializer(serializers.ModelSerializer):
             "id",
             "email",
             "role",
+            "avatar_power",
+            "avatar_url",
             "is_approved",
             "is_banned",
             "date_joined",
             "startup_profile",
             "tester_profile",
         ]
-        read_only_fields = fields
+        read_only_fields = ["id", "email", "role", "avatar_url", "is_approved", "is_banned", "date_joined"]
 
 
 class RegisterSerializer(serializers.ModelSerializer):
     """Handles user registration with role-specific profile creation."""
 
     password = serializers.CharField(write_only=True, min_length=8, style={"input_type": "password"})
-    confirm_password = serializers.CharField(write_only=True, style={"input_type": "password"})
+    confirm_password = serializers.CharField(write_only=True, required=False, default="", style={"input_type": "password"})
 
     # Startup-specific fields (optional)
     company_name = serializers.CharField(required=False, allow_blank=True)
@@ -77,6 +79,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         default=TesterProfile.ExperienceLevel.BEGINNER,
     )
     bio = serializers.CharField(required=False, allow_blank=True, default="")
+    avatar_power = serializers.ChoiceField(choices=User.AvatarPower.choices, default=User.AvatarPower.TECH)
 
     class Meta:
         model = User
@@ -91,10 +94,12 @@ class RegisterSerializer(serializers.ModelSerializer):
             "tools",
             "experience_level",
             "bio",
+            "avatar_power",
         ]
 
     def validate(self, attrs):
-        if attrs["password"] != attrs.pop("confirm_password"):
+        confirm = attrs.pop("confirm_password", "")
+        if confirm and attrs["password"] != confirm:
             raise serializers.ValidationError({"confirm_password": "Passwords do not match."})
 
         role = attrs.get("role")
@@ -116,11 +121,10 @@ class RegisterSerializer(serializers.ModelSerializer):
         experience_level = validated_data.pop("experience_level", TesterProfile.ExperienceLevel.BEGINNER)
         bio = validated_data.pop("bio", "")
 
-        # Auto-approve all users for better consumer experience
         # Only admins get staff permissions
-        validated_data["is_approved"] = True
         if role == User.Role.ADMIN:
             validated_data["is_staff"] = True
+            validated_data["is_approved"] = True
 
         user = User.objects.create_user(**validated_data)
 

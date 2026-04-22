@@ -42,9 +42,12 @@ class RegisterView(APIView):
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
+            refresh = RefreshToken.for_user(user)
             return Response(
                 {
-                    "message": "Registration successful! You can now log in.",
+                    "message": "Registration successful!",
+                    "access": str(refresh.access_token),
+                    "refresh": str(refresh),
                     "user": UserSerializer(user).data,
                 },
                 status=status.HTTP_201_CREATED,
@@ -158,8 +161,8 @@ class LogoutView(APIView):
 
 class MeView(APIView):
     """
-    GET /api/auth/me/
-    Returns the current authenticated user's info.
+    GET   /api/auth/me/  – Returns the current authenticated user's info.
+    PATCH /api/auth/me/  – Updates the current user's profile fields.
     """
     permission_classes = [IsAuthenticated]
 
@@ -170,6 +173,19 @@ class MeView(APIView):
     )
     def get(self, request):
         return Response(UserSerializer(request.user).data)
+
+    @extend_schema(
+        request=UserSerializer,
+        responses={200: UserSerializer},
+        description="Partially updates the current user's profile.",
+        tags=["auth"]
+    )
+    def patch(self, request):
+        serializer = UserSerializer(request.user, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 class PasswordResetRequestView(APIView):

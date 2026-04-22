@@ -5,6 +5,7 @@ import { ArrowLeft, Send, CheckCircle, AlertTriangle } from 'lucide-react';
 import { DashboardLayout } from '../../components/DashboardLayout';
 import { StatusBadge, SeverityBadge } from '../../components/shared/StatusBadge';
 import { startupApi, type Project, type Application, type Report } from '../../lib/api';
+import { getUser } from '../../lib/auth';
 import { ReportChat } from '../../components/shared/ReportChat';
 import { MessageSquare } from 'lucide-react';
 
@@ -26,7 +27,7 @@ export function ProjectDetail() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [activeChat, setActiveChat] = useState<string | null>(null);
 
-  const currentUser = JSON.parse(localStorage.getItem('fixmybits_user') || '{}');
+  const currentUser = getUser();
 
   useEffect(() => {
     Promise.all([
@@ -233,7 +234,7 @@ export function ProjectDetail() {
                   </div>
                   {activeChat === r.id && (
                     <div className="mt-4">
-                      <ReportChat reportId={r.id} currentUserId={currentUser.id} />
+                      <ReportChat reportId={r.id} currentUserId={currentUser?.id ?? ''} />
                     </div>
                   )}
                 </div>

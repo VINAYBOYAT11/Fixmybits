@@ -3,6 +3,7 @@ import { useState, type FormEvent } from 'react';
 import { motion } from 'motion/react';
 import { Shield, Building2, UserCircle2, ArrowRight, CheckCircle2 } from 'lucide-react';
 import { registerUser } from '../lib/api';
+import { setTokens } from '../lib/auth';
 import { AnimatedBackground } from '../components/AnimatedBackground';
 
 type Role = 'startup' | 'tester';
@@ -26,14 +27,17 @@ export function RegisterPage() {
     setError('');
     
     try {
-      await registerUser({
+      const response = await registerUser({
         email,
         password,
         confirm_password: confirmPassword,
         role,
         company_name: role === 'startup' ? companyName : undefined,
+        avatar_power: 'Tech',
       });
-      setSuccess(true);
+      // Auto-login: store tokens and redirect to dashboard
+      setTokens(response.access, response.refresh, response.user);
+      window.location.href = role === 'startup' ? '/startup/dashboard' : '/tester/dashboard';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Registration failed.');
     } finally {
@@ -138,6 +142,7 @@ export function RegisterPage() {
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
                   placeholder="Acme Corp"
+                  autoComplete="organization"
                   className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-transparent focus:outline-none focus:ring-2 ring-[var(--primary)] ring-offset-2 dark:ring-offset-[#262626]"
                 />
               </motion.div>
@@ -151,6 +156,7 @@ export function RegisterPage() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
+                autoComplete="email"
                 className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-transparent focus:outline-none focus:ring-2 ring-[var(--primary)] ring-offset-2 dark:ring-offset-[#262626]"
               />
             </div>
@@ -164,6 +170,7 @@ export function RegisterPage() {
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-transparent focus:outline-none focus:ring-2 ring-[var(--primary)] ring-offset-2 dark:ring-offset-[#262626]"
                 />
               </div>
@@ -175,6 +182,7 @@ export function RegisterPage() {
                   value={confirmPassword}
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="••••••••"
+                  autoComplete="new-password"
                   className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-transparent focus:outline-none focus:ring-2 ring-[var(--primary)] ring-offset-2 dark:ring-offset-[#262626]"
                 />
               </div>

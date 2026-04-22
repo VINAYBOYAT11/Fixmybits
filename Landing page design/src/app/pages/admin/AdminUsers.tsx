@@ -17,13 +17,26 @@ export function AdminUsers() {
   }, []);
 
   const handleApprove = async (id: string, email: string) => {
-    setActionLoading(id);
+    if (!window.confirm(`Approve account for ${email}?`)) return;
+    setActionLoading(id + '_approve');
     try {
       await adminApi.approveUser(id);
       setUsers(users.filter(u => u.id !== id));
-      alert(`User ${email} approved successfully.`);
     } catch (err: any) {
       alert(err.message || "Failed to approve user.");
+    } finally {
+      setActionLoading("");
+    }
+  };
+
+  const handleReject = async (id: string, email: string) => {
+    if (!window.confirm(`Reject and ban account for ${email}? This will prevent them from logging in.`)) return;
+    setActionLoading(id + '_reject');
+    try {
+      await adminApi.banUser(id);
+      setUsers(users.filter(u => u.id !== id));
+    } catch (err: any) {
+      alert(err.message || "Failed to reject user.");
     } finally {
       setActionLoading("");
     }
@@ -70,15 +83,24 @@ export function AdminUsers() {
                 <div className="flex items-center gap-3 w-full md:w-auto">
                   <motion.button
                     onClick={() => handleApprove(user.id, user.email)}
-                    disabled={actionLoading === user.id}
+                    disabled={!!actionLoading}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className="flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2 rounded-full border-2 border-black dark:border-white font-bold bg-[var(--accent-mint)] text-black shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:shadow-none transition-all disabled:opacity-50"
                   >
                     <CheckCircle className="w-4 h-4" />
-                    {actionLoading === user.id ? "Approving..." : "Approve"}
+                    {actionLoading === user.id + '_approve' ? "Approving..." : "Approve"}
                   </motion.button>
-                  {/* Option for rejecting could be added later if API supports deleting/banning directly from here */}
+                  <motion.button
+                    onClick={() => handleReject(user.id, user.email)}
+                    disabled={!!actionLoading}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="flex-1 md:flex-none flex justify-center items-center gap-2 px-6 py-2 rounded-full border-2 border-black dark:border-white font-bold bg-red-500 text-white shadow-[3px_3px_0_0_rgba(0,0,0,1)] hover:shadow-none transition-all disabled:opacity-50"
+                  >
+                    <XCircle className="w-4 h-4" />
+                    {actionLoading === user.id + '_reject' ? "Rejecting..." : "Reject"}
+                  </motion.button>
                 </div>
               </motion.div>
             ))}

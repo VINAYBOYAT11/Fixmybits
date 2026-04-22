@@ -29,14 +29,19 @@ export function TesterProfilePage() {
     e.preventDefault();
     if (!profile) return;
     setSaving(true);
+    setError(null);
     try {
-      await testerApi.updateProfile({
+      const updated = await testerApi.updateProfile({
         skills: profile.skills,
         tools: profile.tools,
         experience_level: profile.experience_level,
         bio: profile.bio,
       });
-      alert("Profile updated successfully!");
+      setProfile(updated);
+      setError(null);
+      // Show success inline
+      const el = document.getElementById('profile-save-status');
+      if (el) { el.textContent = 'Profile saved!'; el.className = 'text-sm text-green-600 dark:text-green-400 font-semibold'; setTimeout(() => { if (el) el.textContent = ''; }, 3000); }
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to update profile");
     } finally {
@@ -92,10 +97,9 @@ export function TesterProfilePage() {
                     onChange={(e) => setProfile({ ...profile, experience_level: e.target.value })}
                     className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-transparent focus:outline-none focus:ring-2 ring-[var(--primary)] text-current"
                   >
-                    <option value="Beginner" className="text-black">Beginner</option>
-                    <option value="Intermediate" className="text-black">Intermediate</option>
-                    <option value="Advanced" className="text-black">Advanced</option>
-                    <option value="Expert" className="text-black">Expert</option>
+                    <option value="beginner" className="text-black">Beginner</option>
+                    <option value="intermediate" className="text-black">Intermediate</option>
+                    <option value="advanced" className="text-black">Advanced</option>
                   </select>
                 </label>
 
@@ -156,7 +160,8 @@ export function TesterProfilePage() {
               </div>
             </div>
 
-            <div className="pt-4 border-t-2 border-black/10 dark:border-white/10 flex justify-end">
+            <div className="pt-4 border-t-2 border-black/10 dark:border-white/10 flex justify-between items-center">
+              <span id="profile-save-status" className="text-sm"></span>
               <motion.button
                 type="submit"
                 disabled={saving}

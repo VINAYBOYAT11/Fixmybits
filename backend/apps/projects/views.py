@@ -318,6 +318,34 @@ class TesterOpenProjectsView(generics.ListAPIView):
         )
 
 
+class TesterProjectDetailView(APIView):
+    """
+    GET /api/tester/projects/open/{pk}/  – retrieve a single open project with has_applied flag
+    """
+    permission_classes = [IsTester]
+
+    @extend_schema(responses={200: OpenProjectSerializer}, tags=["tester"])
+    def get(self, request, pk):
+        try:
+            project = Project.objects.get(pk=pk, status=Project.Status.OPEN)
+        except Project.DoesNotExist:
+            return Response(
+                {"error": "Project not found or not open for applications."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        has_applied = Application.objects.filter(
+            project=project,
+            tester=request.user
+        ).exists()
+
+        serializer = OpenProjectSerializer(project, context={'request': request})
+        data = serializer.data
+        data['has_applied'] = has_applied
+
+        return Response(data)
+
+
 class TesterApplyView(APIView):
     """
     POST /api/tester/projects/{id}/apply/
@@ -332,6 +360,12 @@ class TesterApplyView(APIView):
             return Response(
                 {"error": "Project not found or is not accepting applications."},
                 status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if project.startup == request.user:
+            return Response(
+                {"error": "You cannot apply to your own project."},
+                status=status.HTTP_400_BAD_REQUEST,
             )
 
         if Application.objects.filter(project=project, tester=request.user).exists():
@@ -529,6 +563,30 @@ class AdminApproveUserView(APIView):
         return Response({"message": f"User {user.email} approved.", "user": UserSerializer(user).data})
 
 
+class AdminBanUserView(APIView):
+    """POST /api/admin/users/{id}/ban/"""
+    permission_classes = [IsAdminRole]
+
+    @extend_schema(
+        request=None,
+        responses={200: inline_serializer(name="BanUserResp", fields={"message": serializers.CharField()})},
+        tags=["admin"]
+    )
+    def post(self, request, pk):
+        try:
+            user = User.objects.get(pk=pk)
+        except User.DoesNotExist:
+            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+
+        if user.role == "admin":
+            return Response({"error": "Cannot ban admin users."}, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_banned = True
+        user.is_approved = False
+        user.save(update_fields=["is_banned", "is_approved"])
+        return Response({"message": f"User {user.email} has been banned."})
+
+
 class AdminPendingProjectsView(generics.ListAPIView):
     """GET /api/admin/pending-projects/ (paginated)"""
     permission_classes = [IsAdminRole]
@@ -647,8 +705,13 @@ class AdminAssignTesterView(APIView):
 
         serializer = AssignTesterSerializer(data=request.data)
         if serializer.is_valid():
-            tester = serializer.validated_data["tester_id"]
-            application = serializer.validated_data.get("application_id")
+            tester = serializer.validated_data['tester_id']
+            application = serializer.validated_data.get('application_id')
+            if project.startup == tester:
+                return Response(
+                    {"error": "You cannot assign the startup owner as a tester for their own project."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
             project.assigned_tester = tester
             project.status = Project.Status.IN_PROGRESS
@@ -727,14 +790,18 @@ class AdminReviewReportView(APIView):
         report.admin_feedback = feedback
         report.save(update_fields=["status", "admin_feedback"])
 
+        # Update tester reputation
+        profile = report.tester.tester_profile
         if action == "approve":
             from apps.tasks.email_tasks import send_report_approved_email
             send_report_approved_email.delay(str(report.id), report.tester.email)
-
-            # Increment tester reputation
-            profile = report.tester.tester_profile
             profile.reputation_score += 10
-            profile.save(update_fields=["reputation_score"])
+        elif action == "spam":
+            profile.reputation_score -= 10
+        elif action == "duplicate":
+            profile.reputation_score -= 5
+
+        profile.save(update_fields=["reputation_score"])
 
         return Response(ReportSerializer(report).data)
 

@@ -1,7 +1,7 @@
 import { useState, useEffect, type FormEvent, useRef } from "react";
 import { reportsApi, type ReportMessage } from "../../lib/api";
 import { motion } from "motion/react";
-import { Send, Clock, User as UserIcon } from "lucide-react";
+import { Send, Clock, User as UserIcon, AlertCircle } from "lucide-react";
 
 type Props = { reportId: string; currentUserId: string };
 
@@ -10,14 +10,19 @@ export function ReportChat({ reportId, currentUserId }: Props) {
   const [content, setContent] = useState("");
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   
   const bottomRef = useRef<HTMLDivElement>(null);
+  const mountedRef = useRef(true);
 
   useEffect(() => {
+    mountedRef.current = true;
     loadMessages();
-    // In a real app we'd use websockets or polling here
     const interval = setInterval(loadMessages, 5000);
-    return () => clearInterval(interval);
+    return () => {
+      mountedRef.current = false;
+      clearInterval(interval);
+    };
   }, [reportId]);
 
   useEffect(() => {
@@ -27,11 +32,11 @@ export function ReportChat({ reportId, currentUserId }: Props) {
   const loadMessages = async () => {
     try {
       const msgs = await reportsApi.getMessages(reportId);
-      setMessages(msgs);
+      if (mountedRef.current) setMessages(msgs);
     } catch (err) {
       console.error("Failed to load messages", err);
     } finally {
-      setLoading(false);
+      if (mountedRef.current) setLoading(false);
     }
   };
 
@@ -40,19 +45,25 @@ export function ReportChat({ reportId, currentUserId }: Props) {
     if (!content.trim() || sending) return;
     
     setSending(true);
+    setSendError(null);
     try {
       const newMsg = await reportsApi.sendMessage(reportId, content);
       setMessages(prev => [...prev, newMsg]);
       setContent("");
     } catch (err) {
-      alert("Failed to send message.");
+      setSendError(err instanceof Error ? err.message : "Failed to send message. Please try again.");
     } finally {
       setSending(false);
     }
   };
 
   if (loading) {
-    return <div className="p-4 text-center text-sm opacity-60">Loading messages...</div>;
+    return (
+      <div className="p-4 flex items-center justify-center gap-2 text-sm opacity-60">
+        <div className="w-4 h-4 rounded-full border-2 border-current border-t-transparent animate-spin" />
+        Loading messages...
+      </div>
+    );
   }
 
   return (
@@ -97,6 +108,15 @@ export function ReportChat({ reportId, currentUserId }: Props) {
         )}
         <div ref={bottomRef} />
       </div>
+
+      {/* Send error */}
+      {sendError && (
+        <div className="px-3 py-2 bg-red-50 dark:bg-red-950 border-t border-red-200 dark:border-red-800 flex items-center gap-2 text-red-600 dark:text-red-400 text-xs">
+          <AlertCircle className="w-3.5 h-3.5 flex-shrink-0" />
+          <span>{sendError}</span>
+          <button onClick={() => setSendError(null)} className="ml-auto font-bold hover:underline">Dismiss</button>
+        </div>
+      )}
 
       {/* Input Area */}
       <form onSubmit={handleSend} className="p-3 bg-white dark:bg-[#1a1a1a] border-t-2 border-black dark:border-white flex gap-2">

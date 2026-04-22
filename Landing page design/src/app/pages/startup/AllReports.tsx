@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { DashboardLayout } from '../../components/DashboardLayout';
 import { StatusBadge, SeverityBadge } from '../../components/shared/StatusBadge';
 import { startupApi, type Report } from '../../lib/api';
+import { getUser } from '../../lib/auth';
 import { ReportChat } from '../../components/shared/ReportChat';
 import { MessageSquare } from 'lucide-react';
 
@@ -17,7 +18,7 @@ export function AllReports() {
   const [actionLoading, setActionLoading] = useState('');
   const [activeChat, setActiveChat] = useState<string | null>(null);
   
-  const currentUser = JSON.parse(localStorage.getItem('fixmybits_user') || '{}');
+  const currentUser = getUser();
 
   useEffect(() => {
     startupApi.listReports()
@@ -121,7 +122,7 @@ export function AllReports() {
                 </div>
                 {activeChat === report.id && (
                   <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} className="mt-4">
-                    <ReportChat reportId={report.id} currentUserId={currentUser.id} />
+                    <ReportChat reportId={report.id} currentUserId={currentUser?.id ?? ''} />
                   </motion.div>
                 )}
               </motion.div>

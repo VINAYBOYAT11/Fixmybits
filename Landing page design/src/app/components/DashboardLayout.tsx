@@ -14,8 +14,11 @@ export function DashboardLayout({ children, role, title }: Props) {
   useEffect(() => {
     const u = requireAuth(role);
     if (u) setUser(u);
+    // requireAuth handles redirect if not authenticated
   }, [role]);
 
+  // Show spinner only briefly while checking auth from localStorage
+  // (synchronous check, so this resolves on first render in practice)
   if (!user) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
@@ -79,10 +82,9 @@ export function DashboardLayout({ children, role, title }: Props) {
 
         {/* Page content */}
         <motion.div
-          layout
           initial={{ opacity: 0, y: 15 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.4, ease: "easeOut" }}
+          transition={{ duration: 0.3, ease: "easeOut" }}
           className="flex-1 p-6"
         >
           {children}

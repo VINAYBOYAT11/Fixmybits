@@ -41,9 +41,41 @@ class User(AbstractBaseUser, PermissionsMixin):
         TESTER = "tester", "Tester"
         ADMIN = "admin", "Admin"
 
+    class AvatarPower(models.TextChoices):
+        FIRE = "Fire", "Fire"
+        WATER = "Water", "Water"
+        ELECTRIC = "Electric", "Electric"
+        WIND = "Wind", "Wind"
+        EARTH = "Earth", "Earth"
+        WIZARD = "Wizard", "Wizard"
+        MAGIC = "Magic", "Magic"
+        SHADOW = "Shadow", "Shadow"
+        LIGHT = "Light", "Light"
+        TECH = "Tech", "Tech"
+        NATURE = "Nature", "Nature"
+        ICE = "Ice", "Ice"
+        METAL = "Metal", "Metal"
+        TOXIC = "Toxic", "Toxic"
+        GRAVITY = "Gravity", "Gravity"
+        TIME = "Time", "Time"
+        CHAOS = "Chaos", "Chaos"
+        ORDER = "Order", "Order"
+        GHOST = "Ghost", "Ghost"
+        DRAGON = "Dragon", "Dragon"
+        SPIDERMAN = "Spiderman", "Spiderman"
+        BATMAN = "Batman", "Batman"
+        HULK = "Hulk", "Hulk"
+        THOR = "Thor", "Thor"
+        CAPTAIN_AMERICA = "Captain America", "Captain America"
+        DOREMON = "Doremon", "Doremon"
+
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(unique=True)
     role = models.CharField(max_length=10, choices=Role.choices, default=Role.TESTER)
+    avatar_power = models.CharField(
+        max_length=20, choices=AvatarPower.choices, default=AvatarPower.TECH
+    )
+    avatar_seed = models.CharField(max_length=100, blank=True)
     is_approved = models.BooleanField(default=False)
     is_banned = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
@@ -59,6 +91,41 @@ class User(AbstractBaseUser, PermissionsMixin):
         verbose_name = "User"
         verbose_name_plural = "Users"
         ordering = ["-date_joined"]
+
+    # Mapping of powers to specific DiceBear pixel-art seeds
+    POWER_SEEDS = {
+        "Fire": "Fenix",
+        "Water": "Hydro",
+        "Electric": "Sparky",
+        "Wind": "Zephyr",
+        "Earth": "Terra",
+        "Wizard": "Merlin",
+        "Magic": "Arcane",
+        "Shadow": "Nox",
+        "Light": "Lux",
+        "Tech": "Cyber",
+        "Nature": "Flora",
+        "Ice": "Glacier",
+        "Metal": "Steel",
+        "Toxic": "Venom",
+        "Gravity": "Astro",
+        "Time": "Tempo",
+        "Chaos": "Havoc",
+        "Order": "Justus",
+        "Ghost": "Polter",
+        "Dragon": "Drake",
+        "Spiderman": "Web",
+        "Batman": "Knight",
+        "Hulk": "Smash",
+        "Thor": "Mjolnir",
+        "Captain America": "Shield",
+        "Doremon": "RoboCat",
+    }
+
+    @property
+    def avatar_url(self):
+        seed = self.avatar_seed or self.POWER_SEEDS.get(self.avatar_power, "Cyber")
+        return f"https://api.dicebear.com/7.x/pixel-art/svg?seed={seed}"
 
     def __str__(self):
         return f"{self.email} ({self.get_role_display()})"

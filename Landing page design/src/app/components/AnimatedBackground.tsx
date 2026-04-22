@@ -1,20 +1,57 @@
+import { useMemo } from 'react';
 import { motion } from 'motion/react';
 
-export function AnimatedBackground() {
-  const stars = Array.from({ length: 50 }, (_, i) => ({
-    id: i,
-    x: Math.random() * 100,
-    y: Math.random() * 100,
-    size: Math.random() * 3 + 1,
-    delay: Math.random() * 2,
-    duration: Math.random() * 3 + 2,
-  }));
+// Stars use pure CSS keyframes — zero JS animation overhead
+const STAR_CSS = `
+@keyframes star-rise {
+  0%   { transform: translateY(0);    opacity: 0; }
+  10%  { opacity: 0.6; }
+  90%  { opacity: 0.4; }
+  100% { transform: translateY(-100vh); opacity: 0; }
+}
+@keyframes cloud-left {
+  from { transform: translateX(-300px); }
+  to   { transform: translateX(110vw);  }
+}
+@keyframes cloud-right {
+  from { transform: translateX(110vw);  }
+  to   { transform: translateX(-300px); }
+}
+@keyframes dot-rise {
+  0%   { transform: translateY(0) scale(1);   opacity: 0; }
+  15%  { opacity: 0.6; }
+  85%  { opacity: 0.4; }
+  100% { transform: translateY(-100vh) scale(1.5); opacity: 0; }
+}
+`;
 
+// Fixed seed so values never change between renders
+const STARS = Array.from({ length: 30 }, (_, i) => ({
+  id: i,
+  x: ((i * 37 + 11) % 97),          // deterministic pseudo-random
+  y: ((i * 53 + 7)  % 95),
+  size: (i % 3) + 1,
+  delay: (i * 0.4) % 5,
+  duration: ((i % 4) + 4) * 3,
+}));
+
+const DOTS = [
+  { left: '20%', color: 'var(--accent-pink)',   delay: 0,  duration: 8  },
+  { left: '40%', color: 'var(--accent-mint)',   delay: 4,  duration: 7  },
+  { left: '60%', color: 'var(--accent-yellow)', delay: 1,  duration: 9  },
+  { left: '75%', color: 'var(--primary)',        delay: 2,  duration: 10 },
+  { left: '88%', color: 'var(--accent-pink)',   delay: 3,  duration: 11 },
+];
+
+export function AnimatedBackground() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
-      {/* Stars */}
-      {stars.map((star) => (
-        <motion.div
+      {/* Inject CSS once */}
+      <style>{STAR_CSS}</style>
+
+      {/* Stars — pure CSS, no JS per frame */}
+      {STARS.map((star) => (
+        <div
           key={star.id}
           className="absolute rounded-full opacity-60"
           style={{
@@ -23,142 +60,51 @@ export function AnimatedBackground() {
             width: `${star.size}px`,
             height: `${star.size}px`,
             background: 'currentColor',
-          }}
-          animate={{
-            y: [0, -100],
-            opacity: [0, 0.6, 1, 0.6, 0],
-            scale: [1, 1.5, 1],
-          }}
-          transition={{
-            duration: star.duration * 3,
-            repeat: Infinity,
-            delay: star.delay,
-            ease: 'linear',
+            animation: `star-rise ${star.duration}s linear ${star.delay}s infinite`,
+            willChange: 'transform, opacity',
           }}
         />
       ))}
 
-      {/* Floating Clouds */}
-      <motion.div
-        className="absolute top-10 left-0 rounded-full opacity-60"
-        style={{
-          width: '200px',
-          height: '80px',
-          background: 'rgba(200, 200, 200, 0.3)',
-          filter: 'blur(15px)',
-        }}
-        animate={{
-          x: ['-200px', '100vw'],
-        }}
-        transition={{
-          duration: 40,
-          repeat: Infinity,
-          ease: 'linear',
-        }}
-      />
+      {/* Clouds — pure CSS translate (compositor-only) */}
+      {[
+        { top: '8%',  w: 200, h: 80,  dir: 'left',  dur: 40, delay: 0  },
+        { top: '25%', w: 250, h: 100, dir: 'right', dur: 50, delay: 0  },
+        { top: '55%', w: 180, h: 70,  dir: 'left',  dur: 35, delay: 15 },
+        { top: '67%', w: 220, h: 90,  dir: 'left',  dur: 45, delay: 5  },
+        { top: '82%', w: 280, h: 110, dir: 'right', dur: 55, delay: 10 },
+      ].map((c, i) => (
+        <div
+          key={i}
+          className="absolute rounded-full"
+          style={{
+            top: c.top,
+            [c.dir === 'left' ? 'left' : 'right']: 0,
+            width: `${c.w}px`,
+            height: `${c.h}px`,
+            background: 'rgba(200,200,200,0.3)',
+            filter: 'blur(15px)',
+            opacity: 0.5,
+            animation: `cloud-${c.dir} ${c.dur}s linear ${c.delay}s infinite`,
+            willChange: 'transform',
+          }}
+        />
+      ))}
 
-      <motion.div
-        className="absolute top-1/4 right-0 rounded-full opacity-50"
-        style={{
-          width: '250px',
-          height: '100px',
-          background: 'rgba(200, 200, 200, 0.3)',
-          filter: 'blur(18px)',
-        }}
-        animate={{
-          x: ['100vw', '-250px'],
-        }}
-        transition={{
-          duration: 50,
-          repeat: Infinity,
-          ease: 'linear',
-        }}
-      />
-
-      <motion.div
-        className="absolute bottom-1/3 left-0 rounded-full opacity-55"
-        style={{
-          width: '220px',
-          height: '90px',
-          background: 'rgba(200, 200, 200, 0.3)',
-          filter: 'blur(16px)',
-        }}
-        animate={{
-          x: ['-220px', '100vw'],
-        }}
-        transition={{
-          duration: 45,
-          repeat: Infinity,
-          ease: 'linear',
-          delay: 5,
-        }}
-      />
-
-      <motion.div
-        className="absolute bottom-20 right-0 rounded-full opacity-50"
-        style={{
-          width: '280px',
-          height: '110px',
-          background: 'rgba(200, 200, 200, 0.3)',
-          filter: 'blur(20px)',
-        }}
-        animate={{
-          x: ['100vw', '-280px'],
-        }}
-        transition={{
-          duration: 55,
-          repeat: Infinity,
-          ease: 'linear',
-          delay: 10,
-        }}
-      />
-
-      {/* Additional clouds for more coverage */}
-      <motion.div
-        className="absolute top-1/2 left-0 rounded-full opacity-45"
-        style={{
-          width: '180px',
-          height: '70px',
-          background: 'rgba(200, 200, 200, 0.3)',
-          filter: 'blur(14px)',
-        }}
-        animate={{
-          x: ['-180px', '100vw'],
-        }}
-        transition={{
-          duration: 35,
-          repeat: Infinity,
-          ease: 'linear',
-          delay: 15,
-        }}
-      />
-
-      {/* Planet with Ring */}
+      {/* Planet — only 1 motion element, gentle float */}
       <motion.div
         className="absolute"
-        style={{
-          top: '15%',
-          right: '10%',
-        }}
-        animate={{
-          y: [0, 20, 0],
-          rotate: [0, 5, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
+        style={{ top: '15%', right: '10%' }}
+        animate={{ y: [0, 20, 0], rotate: [0, 5, 0] }}
+        transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
       >
         <div className="relative">
-          {/* Planet */}
           <div
             className="w-20 h-20 rounded-full opacity-30 border-2 border-current"
             style={{ background: 'var(--accent-mint)' }}
           />
-          {/* Ring */}
           <div
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-12 rounded-full opacity-20 border-2 border-current"
+            className="absolute top-1/2 left-1/2 w-32 h-12 rounded-full opacity-20 border-2 border-current"
             style={{
               background: 'transparent',
               transform: 'translateX(-50%) translateY(-50%) rotateX(75deg)',
@@ -167,124 +113,28 @@ export function AnimatedBackground() {
         </div>
       </motion.div>
 
-      {/* Small Planet */}
+      {/* Small planet — only 1 motion element */}
       <motion.div
         className="absolute w-12 h-12 rounded-full opacity-25 border-2 border-current"
-        style={{
-          bottom: '25%',
-          left: '15%',
-          background: 'var(--accent-yellow)',
-        }}
-        animate={{
-          y: [0, -15, 0],
-          x: [0, 10, 0],
-        }}
-        transition={{
-          duration: 6,
-          repeat: Infinity,
-          ease: 'easeInOut',
-        }}
+        style={{ bottom: '25%', left: '15%', background: 'var(--accent-yellow)' }}
+        animate={{ y: [0, -15, 0], x: [0, 10, 0] }}
+        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
       />
 
-      {/* Decorative Dots - Moving Upward */}
-      <motion.div
-        className="absolute w-3 h-3 rounded-full opacity-40"
-        style={{
-          bottom: '0%',
-          left: '20%',
-          background: 'var(--accent-pink)',
-        }}
-        animate={{
-          y: [0, -1000],
-          scale: [1, 1.5, 1],
-          opacity: [0, 0.6, 0],
-        }}
-        transition={{
-          duration: 8,
-          repeat: Infinity,
-          ease: 'linear',
-        }}
-      />
-
-      <motion.div
-        className="absolute w-4 h-4 rounded-full opacity-40"
-        style={{
-          bottom: '0%',
-          right: '25%',
-          background: 'var(--primary)',
-        }}
-        animate={{
-          y: [0, -1000],
-          scale: [1, 1.3, 1],
-          opacity: [0, 0.6, 0],
-        }}
-        transition={{
-          duration: 10,
-          repeat: Infinity,
-          delay: 2,
-          ease: 'linear',
-        }}
-      />
-
-      <motion.div
-        className="absolute w-2 h-2 rounded-full opacity-50"
-        style={{
-          bottom: '0%',
-          left: '40%',
-          background: 'var(--accent-mint)',
-        }}
-        animate={{
-          y: [0, -1000],
-          scale: [1, 1.8, 1],
-          opacity: [0, 0.6, 0],
-        }}
-        transition={{
-          duration: 7,
-          repeat: Infinity,
-          delay: 4,
-          ease: 'linear',
-        }}
-      />
-
-      <motion.div
-        className="absolute w-3 h-3 rounded-full opacity-45"
-        style={{
-          bottom: '0%',
-          left: '60%',
-          background: 'var(--accent-yellow)',
-        }}
-        animate={{
-          y: [0, -1000],
-          scale: [1, 1.4, 1],
-          opacity: [0, 0.6, 0],
-        }}
-        transition={{
-          duration: 9,
-          repeat: Infinity,
-          delay: 1,
-          ease: 'linear',
-        }}
-      />
-
-      <motion.div
-        className="absolute w-2 h-2 rounded-full opacity-50"
-        style={{
-          bottom: '0%',
-          right: '15%',
-          background: 'var(--accent-pink)',
-        }}
-        animate={{
-          y: [0, -1000],
-          scale: [1, 1.6, 1],
-          opacity: [0, 0.6, 0],
-        }}
-        transition={{
-          duration: 11,
-          repeat: Infinity,
-          delay: 3,
-          ease: 'linear',
-        }}
-      />
+      {/* Rising dots — pure CSS */}
+      {DOTS.map((d, i) => (
+        <div
+          key={i}
+          className="absolute w-3 h-3 rounded-full"
+          style={{
+            bottom: '0%',
+            left: d.left,
+            background: d.color,
+            animation: `dot-rise ${d.duration}s linear ${d.delay}s infinite`,
+            willChange: 'transform, opacity',
+          }}
+        />
+      ))}
     </div>
   );
 }

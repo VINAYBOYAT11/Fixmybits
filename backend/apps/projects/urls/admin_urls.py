@@ -3,6 +3,7 @@ from django.urls import path
 from apps.projects.views import (
     AdminPendingUsersView,
     AdminApproveUserView,
+    AdminBanUserView,
     AdminPendingProjectsView,
     AdminApproveProjectView,
     AdminProjectRejectView,
@@ -23,6 +24,7 @@ urlpatterns = [
     # Users
     path("pending-users/", AdminPendingUsersView.as_view(), name="admin-pending-users"),
     path("users/<uuid:pk>/approve/", AdminApproveUserView.as_view(), name="admin-approve-user"),
+    path("users/<uuid:pk>/ban/", AdminBanUserView.as_view(), name="admin-ban-user"),
     # Projects
     path("pending-projects/", AdminPendingProjectsView.as_view(), name="admin-pending-projects"),
     path("projects/<uuid:pk>/approve/", AdminApproveProjectView.as_view(), name="admin-approve-project"),

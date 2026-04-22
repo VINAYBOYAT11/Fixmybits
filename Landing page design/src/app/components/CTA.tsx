@@ -87,6 +87,7 @@ export function CTA() {
                 value={formData.email}
                 onChange={(e) => setFormData((prev) => ({ ...prev, email: e.target.value }))}
                 placeholder="Work email"
+                autoComplete="email"
                 className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-white dark:bg-[#1f1f1f]"
               />
               <select
@@ -106,6 +107,7 @@ export function CTA() {
                 value={formData.company_name ?? ''}
                 onChange={(e) => setFormData((prev) => ({ ...prev, company_name: e.target.value }))}
                 placeholder="Company name"
+                autoComplete="organization"
                 className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-white dark:bg-[#1f1f1f]"
               />
             )}
@@ -117,6 +119,7 @@ export function CTA() {
                 value={formData.password}
                 onChange={(e) => setFormData((prev) => ({ ...prev, password: e.target.value }))}
                 placeholder="Password (min 8 chars)"
+                autoComplete="new-password"
                 className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-white dark:bg-[#1f1f1f]"
               />
               <input
@@ -125,6 +128,7 @@ export function CTA() {
                 value={formData.confirm_password}
                 onChange={(e) => setFormData((prev) => ({ ...prev, confirm_password: e.target.value }))}
                 placeholder="Confirm password"
+                autoComplete="new-password"
                 className="w-full px-4 py-3 rounded-xl border-2 border-black dark:border-white bg-white dark:bg-[#1f1f1f]"
               />
             </div>
