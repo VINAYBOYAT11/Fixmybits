@@ -14,7 +14,7 @@ To quickly get **Claude Code** up to speed with the **FixMyBits** project, follo
 > Here is my current context:
 > - **Architecture**: Django (backend) + React/Vite (frontend).
 > - **Goal**: Integrate the `Landing page design` with the `backend` API and apply premium "Antigravity" aesthetics.
-> - **Source of Truth**: Read `PROJECT_CONTEXT.md` and `Pasted markdown.md` for full project specs and progress.
+> - **Source of Truth**: Read `docs/PROJECT_CONTEXT.md` and `docs/Pasted markdown.md` for full project specs and progress.
 > - **Navigation**: Use the `/graphify` slash command to understand the codebase structure. I have already installed the Graphify agent rules in `.agent/`.
 > - **Current Task**: We are in the middle of integrating `LoginPage.tsx` with the JWT auth endpoints at `/api/auth/login/`.
 > 

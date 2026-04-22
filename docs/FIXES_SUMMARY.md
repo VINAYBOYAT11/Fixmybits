@@ -384,7 +384,7 @@ curl http://localhost:8000/healthz
 ## Related Documentation
 
 - **Implementation Plan:** `.claude/plans/quiet-greeting-meerkat.md`
-- **Quick Start Guide:** `RUN_SERVERS.md`
+- **Quick Start Guide:** `docs/RUN_SERVERS.md`
 - **API Documentation:** `http://localhost:8000/api/docs/` (when running)
 - **Project Status:** `PROJECT_STATUS_HANDOVER.md`
 

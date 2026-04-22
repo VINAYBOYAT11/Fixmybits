@@ -33,7 +33,7 @@ A command-line interface for having interactive conversations with Claude Sonnet
 
 3. **Run the assistant:**
    ```bash
-   python coding_assistant.py
+   python tools/coding_assistant.py
    ```
 
 ## Usage
@@ -88,8 +88,8 @@ You: /load my_previous_chat.json
 
 ## File Structure
 
-- `coding_assistant.py` - Main CLI application
-- `bedrock_helper.py` - AWS Bedrock integration helper
+- `tools/coding_assistant.py` - Main CLI application
+- `tools/bedrock_helper.py` - AWS Bedrock integration helper
 - `.env` - Configuration file with AWS credentials
 - `conversation_history.json` - Auto-saved conversation history
 

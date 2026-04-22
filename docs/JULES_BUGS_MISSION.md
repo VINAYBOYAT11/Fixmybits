@@ -12,7 +12,7 @@ Perform a comprehensive bug detection and security audit of the FixMyBits projec
 - **Environment**: Check for any exposed secrets in `.env.example` or hardcoded in the source code.
 
 ### 2. Integration Audit
-- **API Discrepancies**: Compare `frontend_react2/src/services/api.js` and `Landing page design/` API calls against the Django URL patterns in `backend/`.
+- **API Discrepancies**: Compare `Landing page design/src/app/lib/api.ts` API calls against the Django URL patterns in `backend/`.
 - **Data Validation**: Ensure frontend forms and backend serializers have consistent validation rules (e.g., character limits, required fields).
 
 ### 3. Logic & Permissions Audit
@@ -34,4 +34,4 @@ Perform a comprehensive bug detection and security audit of the FixMyBits projec
 - **Frontend**: React (Vite), Axios.
 - **Entry Points**:
   - Backend: `backend/fixmybits/settings.py`, `backend/apps/`
-  - Frontend: `frontend_react2/src/services/api.js`, `Landing page design/src/`
+  - Frontend: `Landing page design/src/app/lib/api.ts`, `Landing page design/src/`
